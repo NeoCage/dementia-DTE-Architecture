@@ -1,0 +1,49 @@
+name: Clinical or lived-experience review
+description: Tell us where this architecture would fail in real life. No technical knowledge needed.
+title: "[review] "
+labels: ["clinical-review", "lived-experience"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This is the most valuable kind of issue this project can receive.**
+
+        If you are a clinician, a person living with a dementia diagnosis, or a family caregiver,
+        your critique is weighted at least equally with technical review. You do not need to read
+        any code, and you do not need to be polite about it.
+  - type: dropdown
+    id: perspective
+    attributes:
+      label: Your perspective
+      options:
+        - Person living with a dementia diagnosis
+        - Family caregiver
+        - Clinician (neurologist / geriatrician)
+        - Nurse / nurse-navigator
+        - Allied health (OT, psychology, speech therapy)
+        - Healthcare administrator
+        - Researcher
+        - Prefer not to say
+    validations:
+      required: true
+  - type: textarea
+    id: what-is-wrong
+    attributes:
+      label: What would go wrong?
+      description: Be as specific and as blunt as you like. A concrete example beats a general concern.
+      placeholder: |
+        e.g. "The architecture says a cue can be dismissed without interaction, but on a bad
+        afternoon my father would not notice it at all, and the system would record that as
+        'ignored' and learn the wrong thing."
+    validations:
+      required: true
+  - type: textarea
+    id: which-part
+    attributes:
+      label: Which part of the documentation does this relate to?
+      description: Optional. A section number or document name is helpful but not required.
+  - type: textarea
+    id: what-would-help
+    attributes:
+      label: What would need to be true for this to work?
+      description: Optional.

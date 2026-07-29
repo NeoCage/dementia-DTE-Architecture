@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # ADR-0004 requires the system to run without a GPU, on a modest server. CI runs on
+      # CPU-only runners, so a GPU dependency creeping in would fail the build here.
+      - name: Lint
+        run: ruff check src tests examples
+
+      - name: Test
+        run: PYTHONPATH=src pytest -q --cov=dte --cov-report=term-missing
+
+      - name: Validate schemas and synthetic-data labels
+        run: python scripts/check_schemas.py
+
+      - name: Run examples
+        run: |
+          for f in examples/0*.py; do
+            echo "== $f"
+            PYTHONPATH=src python "$f" > /dev/null
+          done
+
+      - name: Run CLI smoke tests
+        run: |
+          PYTHONPATH=src python -m dte.cli simulate --seed 42 > /dev/null
+          PYTHONPATH=src python -m dte.cli risk --patient-index 0 > /dev/null
+          PYTHONPATH=src python -m dte.cli signals --artefact-rate 0.9 > /dev/null
+
+  fairness-gate:
+    name: Subgroup fairness gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ADR-0007: the gate runs AUTOMATICALLY, not as a manual review step. A gate a human has to
+      # remember to run is a gate that gets skipped under deadline pressure — which is exactly
+      # when a biased model is most likely to ship.
+      # n must be large enough that every subgroup reaches MIN_SUBGROUP_N. At small n the gate
+      # blocks because subgroups are uncertifiable, which is correct behaviour but tests a
+      # different property than the one this step is checking.
+      - name: Gate must pass on a fair, adequately powered cohort
+        run: PYTHONPATH=src python -m dte.cli fairness --n 2000 --noise 1.0
+
+      - name: Gate must BLOCK on a biased cohort
+        run: |
+          if PYTHONPATH=src python -m dte.cli fairness --n 2000 --noise 4.0; then
+            echo "::error::The fairness gate PASSED a deliberately biased cohort. The gate is broken."
+            exit 1
+          else
+            echo "Gate correctly blocked the biased cohort."
+          fi
+
+      # ADR-0007 rule 2: "not enough data to certify" must block just as firmly as a measured gap.
+      - name: Gate must BLOCK a cohort too small to certify
+        run: |
+          if PYTHONPATH=src python -m dte.cli fairness --n 300 --noise 1.0; then
+            echo "::error::The gate PASSED a cohort with uncertifiable subgroups. ADR-0007 rule 2 is broken."
+            exit 1
+          else
+            echo "Gate correctly blocked the undersized cohort."
+          fi
+
+  data-safety:
+    name: Data safety check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for anything resembling real patient data
+        run: python scripts/check_data_safety.py
+
+      - name: Every quantitative claim must be labelled
+        run: python scripts/check_labels.py
+
+  docs:
+    name: Documentation integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A reference architecture whose cross-references are broken is much less useful than one
+      # with fewer of them.
+      - name: All internal links and anchors resolve
+        run: python scripts/check_links.py

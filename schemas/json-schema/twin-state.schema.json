@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/NeoCage/github.com-dementia-DTE-Architecture/schemas/json-schema/twin-state.schema.json",
+  "title": "Digital Twin State",
+  "description": "Internal denormalised state document for one patient's Digital Twin. This is a PROJECTION rebuilt from FHIR R5 resources, which remain the system of record. It exists because FHIR is too verbose for the low-latency read path. If this document is lost it can be fully reconstructed; if the FHIR store is lost, the record is gone. See docs/05-data-architecture.md section 5.5.",
+  "type": "object",
+  "required": ["patient_id", "as_of", "baseline", "consent", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1.0" },
+    "patient_id": {
+      "type": "string",
+      "description": "Pseudonymous identifier. NEVER a real medical record number.",
+      "pattern": "^[A-Za-z0-9-]+$"
+    },
+    "as_of": { "type": "string", "format": "date-time" },
+    "is_stale": {
+      "type": "boolean",
+      "description": "True when no data has arrived for more than 72 hours. A stale twin must SAY SO rather than silently serving old state."
+    },
+    "neural": {
+      "type": "object",
+      "description": "EEG-derived features. Raw time-series is never present and never exists server-side (ADR-0002).",
+      "additionalProperties": false,
+      "properties": {
+        "delta_relative_power": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "theta_relative_power": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "alpha_relative_power": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "beta_relative_power": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "gamma_relative_power": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "theta_alpha_ratio": { "type": ["number", "null"], "minimum": 0 },
+        "frontoparietal_coherence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "spectral_entropy": { "type": ["number", "null"] },
+        "usable_epoch_fraction": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "valid_channel_count": { "type": ["integer", "null"], "minimum": 0 },
+        "quality": { "$ref": "#/$defs/qualityFlag" }
+      }
+    },
+    "physiology": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rmssd_ms": { "type": ["number", "null"], "minimum": 0 },
+        "sdnn_ms": { "type": ["number", "null"], "minimum": 0 },
+        "lf_hf_ratio": { "type": ["number", "null"], "minimum": 0 },
+        "resting_hr_bpm": { "type": ["number", "null"], "minimum": 20, "maximum": 220 },
+        "agitation_index": {
+          "type": ["number", "null"],
+          "minimum": 0, "maximum": 1,
+          "description": "Acts as a hard VETO on cue delivery above 0.70, not as a weighted input."
+        },
+        "quality": { "$ref": "#/$defs/qualityFlag" }
+      }
+    },
+    "mobility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gait_speed_ms": { "type": ["number", "null"], "minimum": 0 },
+        "stride_time_cv": { "type": ["number", "null"], "minimum": 0 },
+        "step_count_24h": { "type": ["integer", "null"], "minimum": 0 },
+        "sedentary_fraction": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "night_activity_index": { "type": ["number", "null"], "minimum": 0 },
+        "quality": { "$ref": "#/$defs/qualityFlag" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "place_class": { "type": "string", "enum": ["home", "known-significant", "known-routine", "novel", "unknown"] },
+        "place_significance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "hour_of_day": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "day_of_week": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "minutes_since_last_cue": { "type": ["number", "null"], "minimum": 0 },
+        "cues_delivered_today": { "type": "integer", "minimum": 0 },
+        "eligible_content_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "description": "PER-PATIENT distributional statistics from this person's own history. Never population-derived. This is what makes the object a twin rather than a dashboard.",
+      "required": ["n_observations", "is_established", "stats"],
+      "additionalProperties": false,
+      "properties": {
+        "n_observations": { "type": "integer", "minimum": 0 },
+        "window_days": { "type": "integer", "minimum": 1, "default": 30 },
+        "established_at": { "type": ["string", "null"], "format": "date-time" },
+        "is_established": {
+          "type": "boolean",
+          "description": "False until at least 14 days of observation. While false, NO deviation alert may fire. Firing against an unestablished baseline is how monitoring pilots generate noise in week one and get abandoned in week six."
+        },
+        "stats": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/rollingStat" }
+        }
+      }
+    },
+    "trajectory": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "horizon_months": { "type": "number", "minimum": 1 },
+        "metric": { "type": "string", "examples": ["moca_total", "mmse_total"] },
+        "projected_values": { "type": "array", "items": { "type": "number" } },
+        "ci_lower": { "type": "array", "items": { "type": "number" } },
+        "ci_upper": { "type": "array", "items": { "type": "number" } },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "point_estimate_suppressed": {
+          "type": "boolean",
+          "description": "True when the confidence interval is too wide to be actionable. The simulator then reports a range only, rather than letting a clinician anchor on a number the model cannot support."
+        },
+        "anchor_observations": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "risk": {
+      "type": ["object", "null"],
+      "required": ["score", "band", "top_features", "model_version"],
+      "additionalProperties": false,
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "band": { "type": "string", "enum": ["low", "moderate", "elevated"] },
+        "window_months": { "type": "integer", "default": 18 },
+        "top_features": {
+          "type": "array",
+          "minItems": 3,
+          "description": "REQUIRED, minimum 3. A score cannot be emitted without its reasoning (ADR-0006).",
+          "items": {
+            "type": "object",
+            "required": ["name", "contribution", "direction"],
+            "properties": {
+              "name": { "type": "string" },
+              "contribution": { "type": "number" },
+              "direction": { "type": "string", "enum": ["increases-risk", "decreases-risk"] },
+              "plain_language": { "type": "string" }
+            }
+          }
+        },
+        "model_version": { "type": "string" },
+        "max_subgroup_gap_at_release": {
+          "type": "number",
+          "maximum": 0.10,
+          "description": "Recorded at release. Must be at or below 0.10 (10 percentage points) or the release is blocked (ADR-0007)."
+        },
+        "brier_score": { "type": ["number", "null"] }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "description": "Contextual bandit state. Learned PER PATIENT; never pooled without federated aggregation and explicit consent.",
+      "additionalProperties": false,
+      "properties": {
+        "total_pulls": { "type": "integer", "minimum": 0 },
+        "epsilon": { "type": "number", "minimum": 0, "maximum": 1 },
+        "arm_stats": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["value", "n"],
+            "properties": {
+              "value": { "type": "number" },
+              "n": { "type": "integer", "minimum": 0 },
+              "suppressed_until": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "description": "Per-modality consent snapshot. Reads are gated by this: if location consent is withdrawn, location features become UNREADABLE, not merely hidden in the UI.",
+      "required": ["neural_data", "location_data", "cue_delivery"],
+      "additionalProperties": false,
+      "properties": {
+        "neural_data": { "type": "boolean", "default": false },
+        "wearable_physiology": { "type": "boolean", "default": false },
+        "location_data": { "type": "boolean", "default": false },
+        "cue_delivery": { "type": "boolean", "default": false },
+        "family_visibility": { "type": "boolean", "default": false },
+        "federated_participation": { "type": "boolean", "default": false },
+        "research_use": { "type": "boolean", "default": false },
+        "last_confirmed": { "type": ["string", "null"], "format": "date-time" },
+        "patient_stop_until": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Set by the patient's spoken or gestural stop command. Suspends all cueing for 24 hours. Overrides caregiver settings. A proxy cannot clear this."
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "description": "Append-only. Every write adds a record. Required for audit and for reconstructing what the twin looked like when a clinician acted on it.",
+      "items": {
+        "type": "object",
+        "required": ["recorded_at", "source", "consent_basis"],
+        "properties": {
+          "recorded_at": { "type": "string", "format": "date-time" },
+          "source": { "type": "string" },
+          "device_id": { "type": ["string", "null"] },
+          "transform_version": { "type": ["string", "null"] },
+          "consent_basis": { "type": "string" },
+          "fields_written": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "rollingStat": {
+      "type": "object",
+      "required": ["mean", "std", "n"],
+      "properties": {
+        "mean": { "type": "number" },
+        "std": { "type": "number", "minimum": 0 },
+        "median": { "type": ["number", "null"] },
+        "mad": { "type": ["number", "null"], "description": "Median absolute deviation; used for robust z-scores." },
+        "n": { "type": "integer", "minimum": 0 },
+        "window_days": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "qualityFlag": {
+      "type": "string",
+      "enum": ["sufficient", "insufficient", "stale", "absent"],
+      "description": "Below-minimum quality yields 'insufficient'. Insufficient features are EXCLUDED from inference, never imputed. The clinician surface shows 'insufficient data' rather than a score built on a guess."
+    }
+  }
+}

@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you reference this architecture, please cite the book and this repository."
+title: "Dementia Digital Twin Engine (DTE) Reference Architecture"
+abstract: >-
+  An open reference architecture for integrating AI Digital Twins and Brain-Computer
+  Interfaces into the dementia care pathway, comprising a Digital Twin Engine, a Memory
+  Anchoring Pipeline, FHIR R5 data schemas, and a runnable reference implementation on
+  synthetic data. Companion to the DBA dissertation book by Kishan Das. Contains no real
+  patient data; all quantitative examples are illustrative.
+type: software
+authors:
+  - family-names: Das
+    given-names: Kishan
+    affiliation: Golden Gate University
+version: 0.1.0
+date-released: 2026-07-27
+license: Apache-2.0
+repository-code: "https://github.com/NeoCage/github.com-dementia-DTE-Architecture"
+keywords:
+  - digital twin
+  - brain-computer interface
+  - dementia
+  - Alzheimer's disease
+  - EEG
+  - FHIR
+  - health AI
+  - reference architecture
+references:
+  - type: book
+    title: "AI, Digital Twins, and Brain-Computer Interfaces in Dementia Care: For the Future of Neuroscience and Healthcare"
+    authors:
+      - family-names: Das
+        given-names: Kishan
+    year: 2026
+    institution:
+      name: Golden Gate University

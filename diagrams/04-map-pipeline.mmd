@@ -1,0 +1,91 @@
+%% Full Memory Anchoring Pipeline, including all six hard gates
+%% Source: docs/04-memory-anchoring-pipeline.md §4.3
+flowchart TB
+    subgraph acq["① ACQUISITION — continuous, on-device"]
+        A1["EEG stream<br/>256 Hz"]
+        A2["HRV / IMU<br/>1 Hz"]
+        A3["Location<br/>event-driven"]
+        A4["Clock / calendar"]
+    end
+
+    subgraph feat["② FEATURE EXTRACTION"]
+        B1["Artefact reject<br/>+ quality score"]
+        B2["θ, α band power<br/>θ/α ratio"]
+        B3["Agitation index<br/>from HRV"]
+        B4["Place semantics<br/>lookup"]
+    end
+
+    subgraph fuse["③ FUSION — is this an opportunity?"]
+        C1["Context score"]
+        C2["Physiology score"]
+        C3["Neural score"]
+        C4["Content availability"]
+        C5["Weighted fusion<br/>× quality attenuation"]
+    end
+
+    subgraph gate["④ HARD GATES — any failure ⇒ silence"]
+        D1{"Agitation OK?"}
+        D2{"Refractory<br/>elapsed?"}
+        D3{"Within quiet<br/>hours?"}
+        D4{"Consent active?"}
+        D5{"Quality<br/>sufficient?"}
+        D6{"Daily budget<br/>remaining?"}
+    end
+
+    subgraph select["⑤ SELECTION — which cue?"]
+        E1["Contextual bandit<br/>ε-greedy"]
+        E2["Candidate content<br/>for this context"]
+        E3["Modality:<br/>photo / voice /<br/>audio / scent"]
+    end
+
+    subgraph deliver["⑥ DELIVERY — one cue, low friction"]
+        F1["AR overlay"]
+        F2["Bone-conduction<br/>audio"]
+        F3["Scent diffuser"]
+    end
+
+    subgraph learn["⑦ RESPONSE & LEARNING"]
+        G1["Passive: gaze dwell,<br/>vocalisation, HRV shift"]
+        G2["Active: caregiver<br/>confirms recall"]
+        G3["Reward mapping<br/><i>asymmetric</i>"]
+        G4["Update arm values<br/>for THIS patient"]
+    end
+
+    SILENT["<b>STAY SILENT</b><br/>logged as a decision,<br/>not discarded"]
+
+    A1 --> B1 --> B2 --> C3
+    A2 --> B3 --> C2
+    A3 --> B4 --> C1
+    A4 --> C1
+    B1 -->|quality| C5
+    C1 --> C5
+    C2 --> C5
+    C3 --> C5
+    C4 --> C5
+    C5 --> D1
+    D1 -->|no| SILENT
+    D1 -->|yes| D2
+    D2 -->|no| SILENT
+    D2 -->|yes| D3
+    D3 -->|no| SILENT
+    D3 -->|yes| D4
+    D4 -->|no| SILENT
+    D4 -->|yes| D5
+    D5 -->|no| SILENT
+    D5 -->|yes| D6
+    D6 -->|no| SILENT
+    D6 -->|yes| TH{"confidence ≥ τ?"}
+    TH -->|no| SILENT
+    TH -->|yes| E1
+    E1 --> E2 --> E3
+    E3 --> F1 & F2 & F3
+    F1 & F2 & F3 --> G1
+    G1 --> G3
+    G2 --> G3
+    G3 --> G4
+    G4 -.->|"policy update"| E1
+    SILENT -.->|"negative example<br/>for threshold tuning"| C5
+
+    style SILENT fill:#e5e7eb,stroke:#6b7280,stroke-width:3px
+    style gate fill:#fee2e2,stroke:#dc2626
+    style G3 fill:#fef3c7,stroke:#d97706

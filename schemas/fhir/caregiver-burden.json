@@ -1,0 +1,19 @@
+{
+  "resourceType": "Observation",
+  "id": "synthetic-caregiver-burden-001",
+  "meta": { "security": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HTEST" }] },
+  "status": "final",
+  "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "survey" }] }],
+  "code": {
+    "coding": [{ "system": "https://example.org/dte/CodeSystem/dte", "code": "caregiver-burden-score", "display": "Validated caregiver burden instrument score" }],
+    "text": "Caregiver burden assessment"
+  },
+  "subject": { "reference": "Patient/synthetic-patient-001" },
+  "focus": [{ "display": "SYNTHETIC — primary family caregiver" }],
+  "effectiveDateTime": "2026-03-12",
+  "valueQuantity": { "value": 34, "unit": "{score}", "system": "http://unitsofmeasure.org", "code": "{score}" },
+  "interpretation": [{ "text": "Moderate burden. Trending upward over three assessments." }],
+  "note": [{
+    "text": "Caregiver strain is itself among the strongest predictors of crisis-driven nursing-home placement (docs/REFERENCES.md [15]). It is therefore tracked as a first-class outcome, not as context: a system that improves patient monitoring while increasing caregiver load has not succeeded."
+  }]
+}

@@ -1,0 +1,20 @@
+%% Subgroup fairness gate — the only gate with unconditional release-blocking authority
+%% Source: docs/07-validation-and-benchmarks.md §7.4 · ADR-0007
+flowchart TB
+    M["Candidate model"] --> SPLIT["Stratify eval set by<br/>protected + proxy attributes"]
+    SPLIT --> G1["Age band"]
+    SPLIT --> G2["Sex"]
+    SPLIT --> G3["Race / ethnicity<br/><i>where lawfully collected</i>"]
+    SPLIT --> G4["Primary language"]
+    SPLIT --> G5["Education proxy"]
+    SPLIT --> G6["Site / geography"]
+    G1 & G2 & G3 & G4 & G5 & G6 --> CALC["Per-subgroup:<br/>sensitivity, FPR,<br/>calibration, AUC"]
+    CALC --> GAP["max_gap = max over subgroups<br/>of |metric − population metric|"]
+    GAP --> D{"max_gap ≤ 10 pts<br/>AND every subgroup<br/>n ≥ 30?"}
+    D -->|yes| PASS["✅ Gate passed.<br/>max_gap recorded in<br/>model registry."]
+    D -->|"gap too large"| F1["❌ BLOCKED<br/>→ rebalance training data<br/>→ add explicit fairness<br/>&nbsp;&nbsp;&nbsp;constraints"]
+    D -->|"subgroup too small"| F2["❌ BLOCKED<br/>→ cannot certify.<br/>Collect more data or<br/>narrow the intended<br/>population <b>in writing</b>."]
+    F1 --> M
+    F2 --> NARROW["Restrict model's<br/>documented intended use"]
+    style D fill:#dc2626,stroke:#991b1b,color:#fff
+    style PASS fill:#dcfce7,stroke:#16a34a

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Testing / tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Generated artefacts (synthetic data + model outputs are reproducible; do not commit)
+artifacts/
+data/generated/
+*.joblib
+*.pkl
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+!.run/
+.vscode/
+
+# Secrets — never commit real credentials or any real patient data
+.env
+*.pem
+*.key
+
+# Rendered diagram outputs (reproducible from .mmd source)
+diagrams/*.png
+diagrams/*.svg
+diagrams/*.pdf
+
+# PyCharm run configurations ARE committed - they make the test suite one-click
+!.run/*.run.xml

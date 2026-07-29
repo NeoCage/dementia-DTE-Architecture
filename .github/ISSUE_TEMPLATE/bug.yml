@@ -1,0 +1,34 @@
+name: Bug in the reference code
+description: Something in src/dte does not behave as documented
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reminder: this code operates on synthetic data only. **Do not attach any real patient
+        data**, in any form, to this issue.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What the documentation says should happen
+      description: Please cite the section, so we can tell whether the code or the docs is wrong.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happens
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Python version

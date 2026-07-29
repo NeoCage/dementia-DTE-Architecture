@@ -1,0 +1,36 @@
+name: Architecture concern
+description: Report a design flaw, inconsistency, or unsupported claim
+title: "[arch] "
+labels: ["architecture"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of concern
+      options:
+        - Design flaw or unsafe default
+        - Internal inconsistency between documents
+        - Unsupported or mislabelled quantitative claim
+        - Missing or incorrect citation
+        - Safety / fairness / consent control is weaker than documented
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Where (document, section, or file)
+    validations:
+      required: true
+  - type: checkboxes
+    id: adr
+    attributes:
+      label: Scope
+      options:
+        - label: This would require an Architecture Decision Record to change (see CONTRIBUTING.md)

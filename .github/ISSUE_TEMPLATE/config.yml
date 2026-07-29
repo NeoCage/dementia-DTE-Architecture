@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the disclaimer first
+    url: https://github.com/NeoCage/github.com-dementia-DTE-Architecture/blob/main/DISCLAIMER.md
+    about: Every quantitative figure in this repository is illustrative, not clinical. Please read this before reporting that a number looks wrong.
+  - name: Architecture documentation
+    url: https://github.com/NeoCage/github.com-dementia-DTE-Architecture/tree/main/docs
+    about: Full technical architecture, with reading paths for clinicians, engineers and researchers.

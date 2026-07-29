@@ -1,0 +1,45 @@
+Dementia Digital Twin Engine (DTE) Reference Architecture
+Copyright 2026 Kishan Das
+
+This product includes software and documentation developed as the technical
+companion to the DBA dissertation book "AI, Digital Twins, and Brain-Computer
+Interfaces in Dementia Care: For the Future of Neuroscience and Healthcare"
+(Golden Gate University, 2026).
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+================================================================================
+IMPORTANT NOTICE — NOT A MEDICAL DEVICE
+================================================================================
+
+This Work is a research reference architecture. It is NOT a medical device.
+
+It has not been evaluated, cleared or approved by the U.S. Food and Drug
+Administration, the European Medicines Agency, the UK Medicines and Healthcare
+products Regulatory Agency, the Central Drugs Standard Control Organisation of
+India, or any other regulatory authority.
+
+It must not be used to diagnose, treat, cure, prevent or monitor any disease,
+or to inform any clinical decision about any real person.
+
+No clinical trial has been conducted. No real patient data has been collected,
+processed or analysed by this software. Every quantitative figure in this Work
+is either (a) an illustrative worked example derived from synthetic data or from
+a narrative composite, or (b) a citation to a published third-party study. No
+figure in this Work is a clinical result produced by this system.
+
+Any party redistributing this Work or a Derivative Work thereof is asked to
+retain this notice, and is responsible for its own clinical validation,
+regulatory pathway, ethics approval, data protection impact assessment and
+post-market surveillance before any use involving real patients.
+
+See DISCLAIMER.md for full detail.
+
+================================================================================
+NO REAL PATIENT DATA
+================================================================================
+
+This distribution contains no real patient data. All data used by the software
+is generated at runtime by src/dte/data/synthetic.py. Contributing real,
+identifiable or re-identifiable patient data to this project is prohibited; see
+CONTRIBUTING.md.

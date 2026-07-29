@@ -1,0 +1,48 @@
+{
+  "resourceType": "RiskAssessment",
+  "id": "synthetic-risk-001",
+  "meta": { "security": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HTEST" }] },
+  "status": "final",
+  "code": {
+    "coding": [{ "system": "https://example.org/dte/CodeSystem/dte", "code": "mci-to-dementia-conversion-risk", "display": "MCI to dementia conversion risk, 18 month window" }],
+    "text": "MCI-to-dementia conversion risk (18 months)"
+  },
+  "subject": { "reference": "Patient/synthetic-patient-001" },
+  "occurrenceDateTime": "2026-03-16T02:00:00+05:30",
+  "performer": { "display": "Digital Twin Engine risk stratification service v0.1.0" },
+  "basis": [
+    { "reference": "Observation/synthetic-eeg-bandpower-001", "display": "EEG band power panel" },
+    { "reference": "Observation/synthetic-moca-001", "display": "MoCA 23, 2026-03-10" },
+    { "reference": "Observation/synthetic-gait-001", "display": "Mobility panel" },
+    { "reference": "Device/synthetic-device-eeg-001", "display": "Acquisition device and firmware" }
+  ],
+  "prediction": [{
+    "outcome": {
+      "coding": [{ "system": "http://snomed.info/sct", "code": "52448006", "display": "Dementia" }],
+      "text": "Progression from MCI to dementia"
+    },
+    "probabilityDecimal": 0.61,
+    "qualitativeRisk": {
+      "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/risk-probability", "code": "moderate", "display": "Moderate likelihood" }]
+    },
+    "whenPeriod": { "start": "2026-03-16", "end": "2027-09-16" },
+    "rationale": "Elevated theta-band relative power (1.8 SD above this patient's own baseline) and an elevated theta/alpha ratio are the dominant contributors, together with a declining MoCA trajectory across three visits and reduced gait speed. This is a RISK ESTIMATE, NOT A DIAGNOSIS."
+  }],
+  "note": [
+    {
+      "text": "EXPLANATION — ranked contributing features (required; a score cannot be issued without this). 1) theta_relative_power: +0.19 contribution, direction=increases risk, +1.8 SD vs personal baseline. 2) theta_alpha_ratio: +0.14, increases risk. 3) moca_slope_12mo: +0.11, increases risk, -2.0 points/year. 4) gait_speed_deviation: +0.07, increases risk. 5) age: +0.04, increases risk."
+    },
+    {
+      "text": "MODEL PROVENANCE — model_version=risk-ensemble-0.1.0 (RandomForest + GradientBoosting, soft vote); trained on SYNTHETIC data only; brier_score=0.163; max_subgroup_gap_at_release=0.061 (PASSED the 10 percentage-point fairness gate); fairness gate run 2026-03-14; accountable owner recorded in model registry."
+    },
+    {
+      "text": "PATIENT-FACING VERSION (developed jointly with the patient-and-family advisory council): 'Based on your recent tests and brain-activity recordings, there are some signs we want to keep a close eye on over the next year and a half. This is not a diagnosis, and it does not mean you will definitely develop dementia. It means we would like to see you more often and talk about what support might help. You can ask us to explain any part of this, and you can ask us to stop using this tool at any time.'"
+    },
+    {
+      "text": "WHY RiskAssessment RATHER THAN Observation: the basis element is designed to carry the evidence a prediction rests on. Using it means the explanation travels with the score through any FHIR-conformant system rather than living only in our own interface. See ADR-0006."
+    },
+    {
+      "text": "ALL VALUES SYNTHETIC. This is not a real risk assessment for a real person."
+    }
+  ]
+}

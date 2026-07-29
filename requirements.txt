@@ -1,0 +1,13 @@
+# Core reference implementation
+numpy>=1.24
+scipy>=1.11
+pandas>=2.0
+scikit-learn>=1.3
+pydantic>=2.5
+
+# API service
+fastapi>=0.110
+uvicorn[standard]>=0.27
+
+# Optional extras used by the notebook and plots
+matplotlib>=3.7

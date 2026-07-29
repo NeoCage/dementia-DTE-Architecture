@@ -1,0 +1,38 @@
+%% C4 Level 1 — System Context
+%% Source: docs/01-architecture-overview.md §1.4
+graph TB
+    subgraph people["People"]
+        PT["Person living with dementia<br/><i>wears sensors, receives cues,<br/>can revoke consent at any time</i>"]
+        CG["Family caregiver<br/><i>curates memory content,<br/>sees a calm summary view</i>"]
+        CL["Memory-clinic physician<br/><i>sees risk score + reasons<br/>inside the EHR</i>"]
+        NN["Nurse-navigator<br/><i>sees baseline-deviation alerts<br/>in existing dashboard</i>"]
+        DG["Data-governance officer<br/><i>owns consent + audit</i>"]
+    end
+
+    SYS["<b>Dementia Digital Twin Engine</b><br/>Maintains a living, patient-specific model.<br/>Predicts decline, detects deviation,<br/>anchors memory."]
+
+    subgraph ext["External systems"]
+        EHR["Hospital EHR<br/><i>SMART on FHIR app +<br/>risk-stratification panel</i>"]
+        WEAR["Wearables & BCI<br/><i>EEG headband, wristband,<br/>smart-home sensors</i>"]
+        ACT["Cue actuators<br/><i>AR glasses, audio,<br/>scent diffuser</i>"]
+        FED["Peer institutions<br/><i>federated learning network</i>"]
+    end
+
+    PT -->|"wears"| WEAR
+    WEAR -->|"signals"| SYS
+    SYS -->|"delivers one cue"| ACT
+    ACT -->|"photo / voice / scent"| PT
+    PT -->|"responded? yes / no"| SYS
+
+    CG -->|"curates content library"| SYS
+    SYS -->|"weekly summary, not a firehose"| CG
+
+    SYS <-->|"FHIR R5"| EHR
+    EHR -->|"risk panel"| CL
+    SYS -->|"deviation alerts"| NN
+    SYS -->|"consent + audit log"| DG
+    SYS <-->|"model weights only,<br/>never raw data"| FED
+
+    style SYS fill:#1f6feb,stroke:#0d419d,color:#fff
+    style PT fill:#238636,stroke:#1a7f37,color:#fff
+    style CG fill:#238636,stroke:#1a7f37,color:#fff

@@ -1,0 +1,80 @@
+%% C4 Level 2 — the seven tiers and the privacy boundary
+%% Source: docs/01-architecture-overview.md §1.5
+graph TB
+    subgraph T1["① SENSING TIER — on the body / in the home"]
+        S1["EEG headband<br/>8–16 ch, dry electrodes"]
+        S2["Wristband<br/>HRV, actigraphy, IMU"]
+        S3["Smart-home / geofence<br/><i>opt-in only</i>"]
+        S4["Caregiver app<br/>behaviour log"]
+    end
+
+    subgraph T2["② EDGE TIER — patient's phone (privacy boundary)"]
+        E1["Artefact rejection<br/><i>ambulatory EEG loses<br/>10–15% quality to motion 🔵[17]</i>"]
+        E2["Feature extraction<br/>band power, connectivity, HRV, gait"]
+        E3["On-device inference<br/>opportunity detector"]
+        E4["Privacy filter<br/><b>raw neural data stops here</b>"]
+        E5["Store-and-forward<br/>works offline"]
+    end
+
+    subgraph T3["③ INTEROPERABILITY TIER"]
+        I1["FHIR R5 server"]
+        I2["Terminology service<br/>LOINC / SNOMED CT"]
+        I3["Consent service<br/>FHIR Consent resource"]
+    end
+
+    subgraph T4["④ DIGITAL TWIN ENGINE"]
+        D1["Twin State Store<br/>current state + personal baseline"]
+        D2["Multimodal Fusion<br/>context + physiology + neural + content"]
+        D3["Neurodegeneration Simulator<br/>12-month trajectory forecast"]
+        D4["Risk Stratification<br/>ensemble, MCI→dementia"]
+        D5["Personalisation Policy<br/>contextual bandit"]
+        D6["Explainability Service<br/>top contributing features"]
+    end
+
+    subgraph T5["⑤ FEDERATED LEARNING TIER"]
+        F1["Coordinator"]
+        F2["Secure aggregation<br/>+ differential privacy"]
+    end
+
+    subgraph T6["⑥ EXPERIENCE TIER"]
+        X1["Clinician: SMART on FHIR app<br/>inside the EHR risk panel"]
+        X2["Nurse-navigator:<br/>extends existing dashboard"]
+        X3["Family app<br/><i>held back until Release 3</i>"]
+        X4["Cue delivery<br/>AR / audio / scent"]
+    end
+
+    subgraph T7["⑦ CROSS-CUTTING"]
+        C1["Fairness Gate<br/><i>blocks release</i>"]
+        C2["Audit & Provenance"]
+        C3["MLOps & Drift Monitor"]
+        C4["Alert Budget Governor"]
+    end
+
+    S1 --> E1
+    S2 --> E2
+    S3 --> E2
+    S4 --> I1
+    E1 --> E2 --> E3 --> E4 --> E5
+    E3 -.->|"<2s local decision"| X4
+    E5 -->|"features only, TLS"| I1
+    I1 --> D1
+    I2 --> I1
+    I3 -->|"gates every read"| D1
+    D1 --> D2 --> D5 --> X4
+    D1 --> D3 --> X2
+    D1 --> D4 --> D6 --> X1
+    D2 --> D1
+    D4 <--> F1
+    F1 --> F2
+    D1 --> X2
+    D1 --> X3
+    C1 -.->|"gates"| D4
+    C4 -.->|"caps"| X2
+    C2 -.-> D1
+    C3 -.-> D4
+
+    style T2 fill:#fff4e6,stroke:#d97706
+    style T4 fill:#e6f0ff,stroke:#1f6feb
+    style T7 fill:#f3e8ff,stroke:#8b5cf6
+    style E4 fill:#dc2626,stroke:#991b1b,color:#fff
+    style C1 fill:#dc2626,stroke:#991b1b,color:#fff

@@ -1,0 +1,32 @@
+{
+  "resourceType": "Observation",
+  "id": "synthetic-moca-001",
+  "meta": { "security": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HTEST" }] },
+  "status": "final",
+  "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "survey" }] }],
+  "code": {
+    "coding": [{ "system": "http://loinc.org", "code": "72106-8", "display": "Montreal Cognitive Assessment [MoCA]" }],
+    "text": "MoCA total score"
+  },
+  "subject": { "reference": "Patient/synthetic-patient-001" },
+  "effectiveDateTime": "2026-03-10",
+  "performer": [{ "display": "SYNTHETIC — trained assessor, memory clinic" }],
+  "valueQuantity": { "value": 23, "unit": "{score}", "system": "http://unitsofmeasure.org", "code": "{score}" },
+  "interpretation": [{ "text": "Consistent with mild cognitive impairment. Requires clinical correlation; a screening score is not a diagnosis." }],
+  "component": [
+    { "code": { "text": "Visuospatial / executive" }, "valueQuantity": { "value": 3, "unit": "{score}" } },
+    { "code": { "text": "Naming" }, "valueQuantity": { "value": 3, "unit": "{score}" } },
+    { "code": { "text": "Attention" }, "valueQuantity": { "value": 5, "unit": "{score}" } },
+    { "code": { "text": "Language" }, "valueQuantity": { "value": 2, "unit": "{score}" } },
+    { "code": { "text": "Abstraction" }, "valueQuantity": { "value": 1, "unit": "{score}" } },
+    { "code": { "text": "Delayed recall" }, "valueQuantity": { "value": 2, "unit": "{score}" } },
+    { "code": { "text": "Orientation" }, "valueQuantity": { "value": 6, "unit": "{score}" } },
+    {
+      "code": { "text": "Administered by trained assessor" },
+      "valueBoolean": true,
+      "interpretation": [{ "text": "Required field. An unattested score is excluded from model input." }]
+    },
+    { "code": { "text": "Years of education (score adjustment applied)" }, "valueQuantity": { "value": 11, "unit": "a" } }
+  ],
+  "note": [{ "text": "At least 2 visits spanning 6-12 months are required before a risk score is produced. A single snapshot underperforms a short longitudinal record (docs/REFERENCES.md [16])." }]
+}

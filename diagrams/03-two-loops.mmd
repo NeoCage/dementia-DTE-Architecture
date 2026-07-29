@@ -1,0 +1,24 @@
+%% The two decision loops — fast (memory) and slow (clinical)
+%% Source: docs/01-architecture-overview.md §1.6
+graph LR
+    subgraph fast["FAST LOOP — Memory Anchoring · target < 2 s · runs on the phone"]
+        A1["Signals"] --> A2["Fuse 4 channels"] --> A3["Confidence<br/>≥ threshold?"]
+        A3 -->|yes| A4["Select ONE cue"] --> A5["Deliver"] --> A6["Response<br/>observed"]
+        A6 -->|"reward"| A4
+        A3 -->|no| A7["Stay silent<br/><i>the default</i>"]
+    end
+
+    subgraph slow["SLOW LOOP — Clinical Risk · days to months · runs in the cloud"]
+        B1["Longitudinal record<br/>6–12 months"] --> B2["Ensemble risk model"] --> B3["Fairness gate"]
+        B3 -->|pass| B4["Score + reasons<br/>→ EHR panel"] --> B5["Clinician acts"]
+        B5 -->|"outcome label"| B1
+        B3 -->|fail| B6["Release blocked"]
+    end
+
+    A6 -.->|"engagement history<br/>enriches the twin"| B1
+    B4 -.->|"stage informs<br/>cue strategy"| A4
+
+    style fast fill:#fff4e6,stroke:#d97706
+    style slow fill:#e6f0ff,stroke:#1f6feb
+    style A7 fill:#e5e7eb,stroke:#6b7280
+    style B6 fill:#dc2626,stroke:#991b1b,color:#fff

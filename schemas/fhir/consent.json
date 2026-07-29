@@ -1,0 +1,72 @@
+{
+  "resourceType": "Consent",
+  "id": "synthetic-consent-001",
+  "meta": { "security": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HTEST" }] },
+  "status": "active",
+  "category": [{
+    "coding": [{
+      "system": "http://terminology.hl7.org/CodeSystem/consentcategorycodes",
+      "code": "research",
+      "display": "Research Information Access"
+    }]
+  }],
+  "subject": { "reference": "Patient/synthetic-patient-001" },
+  "date": "2026-03-01",
+  "period": { "start": "2026-03-01", "end": "2026-05-30" },
+  "grantor": [{ "reference": "Patient/synthetic-patient-001" }],
+  "decision": "permit",
+  "provision": [
+    {
+      "period": { "start": "2026-03-01", "end": "2026-05-30" },
+      "purpose": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "TREAT", "display": "treatment" }],
+      "documentType": [{ "system": "https://example.org/dte/CodeSystem/modality", "code": "neural-eeg", "display": "EEG-derived features" }],
+      "extension": [
+        { "url": "https://example.org/dte/StructureDefinition/reconfirm-days", "valueInteger": 90 },
+        { "url": "https://example.org/dte/StructureDefinition/default-state", "valueCode": "opt-in" },
+        { "url": "https://example.org/dte/StructureDefinition/raw-data-retained", "valueBoolean": false }
+      ]
+    },
+    {
+      "period": { "start": "2026-03-01", "end": "2026-05-30" },
+      "purpose": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "TREAT" }],
+      "documentType": [{ "system": "https://example.org/dte/CodeSystem/modality", "code": "wearable-physiology", "display": "HRV and gait features" }],
+      "extension": [{ "url": "https://example.org/dte/StructureDefinition/reconfirm-days", "valueInteger": 90 }]
+    },
+    {
+      "period": { "start": "2026-03-01", "end": "2026-03-31" },
+      "purpose": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "TREAT" }],
+      "documentType": [{ "system": "https://example.org/dte/CodeSystem/modality", "code": "location-geofence", "display": "Location and geofence data" }],
+      "extension": [
+        { "url": "https://example.org/dte/StructureDefinition/reconfirm-days", "valueInteger": 30 },
+        { "url": "https://example.org/dte/StructureDefinition/default-state", "valueCode": "opt-in-off-by-default" },
+        { "url": "https://example.org/dte/StructureDefinition/note", "valueString": "Shortest re-confirmation cycle in the system. Highest surveillance potential." }
+      ]
+    },
+    {
+      "period": { "start": "2026-03-01", "end": "2026-05-30" },
+      "purpose": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "TREAT" }],
+      "documentType": [{ "system": "https://example.org/dte/CodeSystem/modality", "code": "cue-delivery", "display": "Memory cue delivery" }],
+      "extension": [{
+        "url": "https://example.org/dte/StructureDefinition/note",
+        "valueString": "Patient stop-command overrides this provision instantly and overrides caregiver settings. A proxy cannot override the patient's in-the-moment refusal."
+      }]
+    },
+    {
+      "period": { "start": "2026-03-01", "end": "2026-05-30" },
+      "purpose": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "TREAT" }],
+      "documentType": [{ "system": "https://example.org/dte/CodeSystem/modality", "code": "family-visibility", "display": "Family app visibility" }]
+    },
+    {
+      "period": { "start": "2026-03-01", "end": "2027-02-28" },
+      "purpose": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HRESCH", "display": "healthcare research" }],
+      "documentType": [{ "system": "https://example.org/dte/CodeSystem/modality", "code": "federated-participation", "display": "Federated learning participation" }],
+      "extension": [{
+        "url": "https://example.org/dte/StructureDefinition/note",
+        "valueString": "DISCLOSED AT CONSENT: a contribution already incorporated into trained model weights cannot be removed on withdrawal without full retraining. This limit is stated in plain language rather than implied."
+      }]
+    }
+  ],
+  "note": [{
+    "text": "Consent is per-modality, time-bounded and revocable without justification. Withdrawal never triggers a clinical escalation. See docs/08-security-and-privacy.md section 8.5."
+  }]
+}

@@ -1,0 +1,44 @@
+{
+  "resourceType": "Observation",
+  "id": "synthetic-gait-001",
+  "meta": { "security": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HTEST" }] },
+  "status": "final",
+  "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "activity" }] }],
+  "code": {
+    "coding": [{ "system": "http://loinc.org", "code": "41950-7", "display": "Number of steps in 24 hour Measured" }],
+    "text": "Mobility and gait panel, wearable-derived"
+  },
+  "subject": { "reference": "Patient/synthetic-patient-001" },
+  "effectiveDateTime": "2026-03-15",
+  "component": [
+    {
+      "code": { "text": "Gait speed, mean over qualifying walking bouts" },
+      "valueQuantity": { "value": 0.94, "unit": "m/s", "system": "http://unitsofmeasure.org", "code": "m/s" },
+      "interpretation": [{
+        "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation", "code": "L", "display": "Low" }],
+        "text": "Deviation of -2.1 SD from this patient's own 30-day rolling baseline of 1.12 m/s. A value of 0.94 m/s is unremarkable for one person and alarming for another; only the personal baseline makes it interpretable. This deviation triggered DetectedIssue/synthetic-deviation-001."
+      }]
+    },
+    {
+      "code": { "text": "Stride time variability, coefficient of variation" },
+      "valueQuantity": { "value": 0.081, "unit": "proportion", "system": "http://unitsofmeasure.org", "code": "1" }
+    },
+    {
+      "code": { "text": "Step count, 24 hour" },
+      "valueQuantity": { "value": 3120, "unit": "steps", "system": "http://unitsofmeasure.org", "code": "1" }
+    },
+    {
+      "code": { "text": "Sedentary fraction of waking hours" },
+      "valueQuantity": { "value": 0.71, "unit": "proportion", "system": "http://unitsofmeasure.org", "code": "1" }
+    },
+    {
+      "code": { "text": "Night-time activity index" },
+      "valueQuantity": { "value": 0.19, "unit": "index", "system": "http://unitsofmeasure.org", "code": "1" }
+    },
+    {
+      "code": { "text": "Longest contiguous walking bout" },
+      "valueQuantity": { "value": 94, "unit": "s", "system": "http://unitsofmeasure.org", "code": "s" },
+      "interpretation": [{ "text": "Minimum 30 s for a bout to qualify for gait-speed computation." }]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "resourceType": "Device",
+  "id": "synthetic-device-eeg-001",
+  "meta": { "security": [{ "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason", "code": "HTEST" }] },
+  "identifier": [{ "system": "https://example.org/dte/device", "value": "EEG-HB-0042" }],
+  "status": "active",
+  "type": [{
+    "coding": [{
+      "system": "http://snomed.info/sct",
+      "code": "706766009",
+      "display": "Electroencephalography electrode"
+    }],
+    "text": "Non-invasive dry-electrode EEG headband, 8 channel"
+  }],
+  "manufacturer": "SYNTHETIC VENDOR",
+  "version": [
+    { "type": { "text": "firmware" }, "value": "2.4.1" },
+    { "type": { "text": "feature-extraction-pipeline" }, "value": "dte-signals-0.1.0" }
+  ],
+  "property": [
+    {
+      "type": { "text": "channel-count" },
+      "valueQuantity": { "value": 8, "unit": "channels", "system": "http://unitsofmeasure.org", "code": "1" }
+    },
+    {
+      "type": { "text": "sampling-rate" },
+      "valueQuantity": { "value": 256, "unit": "Hz", "system": "http://unitsofmeasure.org", "code": "Hz" }
+    },
+    {
+      "type": { "text": "invasiveness" },
+      "valueCodeableConcept": { "text": "non-invasive" }
+    }
+  ],
+  "note": [{
+    "text": "Firmware and pipeline versions are recorded because a feature-extraction change alters the meaning of every downstream value. Model registry entries reference these versions."
+  }]
+}
