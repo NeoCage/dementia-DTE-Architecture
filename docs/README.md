@@ -57,18 +57,8 @@ Your critique is welcome — see [`../CONTRIBUTING.md`](../CONTRIBUTING.md#clini
 | 11 | [Implementation Roadmap](11-implementation-roadmap.md) | Six phases from single-clinic pilot to multi-site federation, with go / no-go criteria. |
 | 12 | [Glossary](12-glossary.md) | Every acronym and term, defined in plain language. |
 | [15](15-fidelity-ladder.md) | The Fidelity Ladder — tiers, claim ceilings, and the scenario suite | 20 min |
-| — | [Architecture Decision Records](adr/) | Nine records of *why* the significant choices were made, and what was rejected. |
+| — | [Architecture Decision Records](adr/) | Thirteen records of *why* the significant choices were made, and what was rejected. |
 | — | [References](REFERENCES.md) | Numbered citation list used throughout. |
-
-## Source book excerpt
-
-[`book/chapter-3-vision-to-technology-requirements.pdf`](book/chapter-3-vision-to-technology-requirements.pdf)
-— the chapter of the dissertation book this architecture was derived from. Useful if you want the
-narrative reasoning behind the requirements in [§2](02-requirements-and-traceability.md) rather than
-the structured version.
-
-> ⚠️ The book uses "St. Mercy Medical Center" as a narrative composite and labels its illustrative
-> figures as such. See [`../DISCLAIMER.md`](../DISCLAIMER.md).
 
 ## Diagram sources
 

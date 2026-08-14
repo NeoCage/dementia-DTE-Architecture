@@ -194,7 +194,7 @@ Before any production phase:
 
 - [ ] Named operational owner and escalation path
 - [ ] Runbook for sensor failure, model drift, alert flood, consent-service outage
-- [ ] Alert ceiling agreed **in writing** with the receiving team ([§7.3](07-validation-and-benchmarks.md#73-r2--monitoring-benchmarks))
+- [ ] Alert ceiling agreed **in writing** with the receiving team ([§7.3](07-validation-and-benchmarks.md#73-r2--monitoring-benchmarks-minimum-tier-t1))
 - [ ] Rollback plan tested, including reverting an EHR panel change
 - [ ] Clinician training delivered — and scheduled to **recur**, not one-time
 - [ ] Patient-facing materials reviewed by the patient-and-family advisory council

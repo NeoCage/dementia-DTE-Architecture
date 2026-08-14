@@ -28,7 +28,7 @@ al., 2019, *JAMA Neurology* 76(10):1166–1173). Collaborative care reducing car
 beneficiary per month (Possin et al., 2019; Guterman et al., 2023).
 
 **The therapeutic premise of the MAP carries a specific carer risk.** The Cochrane review of
-reminiscence therapy (22 studies, n=1,972; meta-analysis of 16, n=1,749) found small and
+reminiscence therapy (🔵 LITERATURE: 22 studies, n=1,972; meta-analysis of 16, n=1,749) found small and
 inconsistent benefits to quality of life, cognition and communication — and, on carer outcomes, no
 evidence of benefit together with a **potential adverse outcome: carer anxiety at longer-term
 follow-up**. The Memory Anchoring Pipeline inherits that risk profile. It is not acceptable to

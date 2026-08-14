@@ -27,7 +27,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from dte.tiers import Claim, TierState
 from dte.config import (
     AGITATION_VETO,
     DAILY_CUE_BUDGET,
@@ -37,6 +36,7 @@ from dte.config import (
     REFRACTORY_MINUTES,
     AlertBudgetConfig,
 )
+from dte.tiers import Claim, TierState
 
 # Signal quality at or above this level is treated as "good enough" and does not attenuate
 # confidence. Below it, confidence is progressively eroded. Distinct from the hard quality gate

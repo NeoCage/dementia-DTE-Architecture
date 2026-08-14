@@ -12,13 +12,14 @@ questionnaire.
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from dte.tiers import (
     Claim,
     ClaimCeilingViolation,
     Tier,
-    TierState,
     assert_claim_permitted,
     detect_tier,
     downgrade_note,
@@ -215,9 +216,14 @@ def test_tier_state_serialises_with_its_permitted_claims():
 
 
 def test_tier_state_is_immutable():
-    """Tier is derived, never assigned. An immutable record makes that structural."""
+    """Tier is derived, never assigned. An immutable record makes that structural.
+
+    The exception is asserted specifically rather than as a bare ``Exception``: the point of
+    this test is that the record is *frozen*, not merely that assignment fails somehow. A
+    TypeError from an unrelated refactor would otherwise pass silently.
+    """
     state = detect_tier(FULL)
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         state.tier = Tier.T0_REPORT  # type: ignore[misc]
 
 

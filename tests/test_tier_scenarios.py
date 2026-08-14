@@ -24,10 +24,10 @@ from pathlib import Path
 import pytest
 
 from dte.tiers import (
+    AttributionBasis,
     Claim,
     ClaimCeilingViolation,
     Tier,
-    AttributionBasis,
     assert_claim_permitted,
     detect_tier,
     downgrade_note,

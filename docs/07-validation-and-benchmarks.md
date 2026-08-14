@@ -173,7 +173,7 @@ the subgroup fairness gate is treated: **a deterioration in carer anxiety at lon
 blocks release of the MAP, regardless of how every patient-facing metric performs.**
 
 The reason is specific rather than precautionary. The Cochrane review of reminiscence therapy
-(22 studies, n=1,972; meta-analysis of 16, n=1,749) found small and inconsistent benefits to
+(🔵 LITERATURE: 22 studies, n=1,972; meta-analysis of 16, n=1,749) found small and inconsistent benefits to
 quality of life, cognition and communication — and, on carer outcomes, *no evidence of benefit
 together with a potential adverse outcome: carer anxiety at longer-term follow-up*. The Memory
 Anchoring Pipeline is built on that therapeutic premise. Building it without measuring the one harm
