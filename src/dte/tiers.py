@@ -71,6 +71,7 @@ class Claim(IntEnum):
 
     CARE_PLAN = 0
     DEVIATION = 1
+    DEVIATION_ATTRIBUTION = 4
     CONVERSION_RISK = 2
     CUE_OPPORTUNITY = 3
 
@@ -79,9 +80,54 @@ class Claim(IntEnum):
         return {
             Claim.CARE_PLAN: "care-plan support and burden tracking",
             Claim.DEVIATION: "deviation from this person's own baseline",
+            Claim.DEVIATION_ATTRIBUTION: (
+                "whether this deviation is more likely neurodegenerative or reversible"
+            ),
             Claim.CONVERSION_RISK: "MCI-to-dementia conversion risk",
             Claim.CUE_OPPORTUNITY: "real-time memory-cue opportunity",
         }[self]
+
+
+class AttributionBasis(IntEnum):
+    """What the twin knows about the *cause* of an observed deviation (ADR-0013).
+
+    Orthogonal to :class:`Tier`, deliberately. Tier governs what can be observed; attribution
+    basis governs what may be said about why. A T1 household with a confirmed biomarker and a T3
+    household with none are different in kind, not in degree, and neither dominates the other.
+
+    Ordered only for convenience of comparison. A3_EXCLUDED is NOT "better" than A2_CONFIRMED --
+    both are informative, and the negative result is frequently the more actionable of the two
+    because it redirects a clinician toward a reversible cause.
+    """
+
+    A0_NONE = 0
+    A1_CLINICAL = 1
+    A2_CONFIRMED = 2
+    A3_EXCLUDED = 3
+
+    @property
+    def label(self) -> str:
+        return {
+            AttributionBasis.A0_NONE: "A0 - no biomarker information",
+            AttributionBasis.A1_CLINICAL: "A1 - clinical diagnosis, unconfirmed",
+            AttributionBasis.A2_CONFIRMED: "A2 - biomarker positive",
+            AttributionBasis.A3_EXCLUDED: "A3 - biomarker negative",
+        }[self]
+
+    @property
+    def supports_attribution(self) -> bool:
+        """Whether this basis licenses any statement about cause.
+
+        Only a present result does. A clinical diagnosis without biomarker confirmation is not a
+        basis for attributing a *specific* deviation to pathology, which is the whole point of
+        separating A1 from A2.
+        """
+        return self in (AttributionBasis.A2_CONFIRMED, AttributionBasis.A3_EXCLUDED)
+
+
+# Claims that additionally require an attribution basis (ADR-0013). Absence of a basis lowers the
+# ceiling; it never blocks enrolment or withholds a lower claim.
+_REQUIRES_ATTRIBUTION: frozenset[str] = frozenset({"DEVIATION_ATTRIBUTION"})
 
 
 # The ceiling table. A tier permits every claim whose required tier is at or below it.
@@ -92,6 +138,7 @@ class Claim(IntEnum):
 MINIMUM_TIER_FOR_CLAIM: dict[Claim, Tier] = {
     Claim.CARE_PLAN: Tier.T0_REPORT,
     Claim.DEVIATION: Tier.T1_AMBIENT,
+    Claim.DEVIATION_ATTRIBUTION: Tier.T1_AMBIENT,
     Claim.CONVERSION_RISK: Tier.T2_PHYSIOLOGICAL,
     Claim.CUE_OPPORTUNITY: Tier.T3_NEURAL,
 }
@@ -130,7 +177,8 @@ class TierState:
     """
 
     tier: Tier
-    available: frozenset[str]
+    attribution: AttributionBasis = AttributionBasis.A0_NONE
+    available: frozenset[str] = field(default_factory=frozenset)
     unknown: frozenset[str] = field(default_factory=frozenset)
     evaluated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -156,9 +204,14 @@ class TierState:
         return _TIER_REQUIREMENTS[Tier.T0_REPORT] <= self.available
 
     def permits(self, claim: Claim) -> bool:
+        """Evaluate both axes. Either one can refuse (ADR-0010, ADR-0013)."""
         if not self.viable:
             return False
-        return self.tier >= MINIMUM_TIER_FOR_CLAIM[claim]
+        if self.tier < MINIMUM_TIER_FOR_CLAIM[claim]:
+            return False
+        if claim.name in _REQUIRES_ATTRIBUTION and not self.attribution.supports_attribution:
+            return False
+        return True
 
     def permitted_claims(self) -> list[Claim]:
         return [c for c in Claim if self.permits(c)]
@@ -170,7 +223,7 @@ class TierState:
                 "No signals reporting. This record cannot support any claim, including "
                 "care-plan support, until a caregiver report is entered."
             )
-        base = f"Operating at {self.tier.label}."
+        base = f"Operating at {self.tier.label}; {self.attribution.label}."
         if self.missing_for_next:
             nxt = Tier(self.tier + 1)
             base += (
@@ -188,6 +241,8 @@ class TierState:
         return {
             "tier": int(self.tier),
             "tier_label": self.tier.label,
+            "attribution": int(self.attribution),
+            "attribution_label": self.attribution.label,
             "available_signals": sorted(self.available),
             "missing_for_next_tier": sorted(self.missing_for_next),
             "permitted_claims": [c.name for c in self.permitted_claims()],
@@ -195,7 +250,10 @@ class TierState:
         }
 
 
-def detect_tier(available_signals: Iterable[str]) -> TierState:
+def detect_tier(
+    available_signals: Iterable[str],
+    attribution: AttributionBasis = AttributionBasis.A0_NONE,
+) -> TierState:
     """Derive the current tier from the signals actually available on this evaluation.
 
     Unknown signal names are recorded rather than silently dropped: a typo in a device
@@ -214,7 +272,9 @@ def detect_tier(available_signals: Iterable[str]) -> TierState:
     if not _TIER_REQUIREMENTS[Tier.T0_REPORT] <= known:
         # Without even a caregiver report there is no twin. T0 is the floor, and a twin at the
         # floor with nothing under it still may not make claims — CARE_PLAN requires the report.
-        return TierState(tier=Tier.T0_REPORT, available=known, unknown=unknown)
+        return TierState(
+            tier=Tier.T0_REPORT, attribution=attribution, available=known, unknown=unknown
+        )
 
     for candidate in (Tier.T1_AMBIENT, Tier.T2_PHYSIOLOGICAL, Tier.T3_NEURAL):
         if _TIER_REQUIREMENTS[candidate] <= known:
@@ -222,7 +282,7 @@ def detect_tier(available_signals: Iterable[str]) -> TierState:
         else:
             break
 
-    return TierState(tier=tier, available=known, unknown=unknown)
+    return TierState(tier=tier, attribution=attribution, available=known, unknown=unknown)
 
 
 def assert_claim_permitted(state: TierState, claim: Claim) -> None:
@@ -233,6 +293,17 @@ def assert_claim_permitted(state: TierState, claim: Claim) -> None:
         raise ClaimCeilingViolation(
             f"claim ceiling violated: '{claim.label}' attempted on a record with no reporting "
             "signals. Even care-plan support requires a caregiver report (ADR-0010)."
+        )
+    if (
+        claim.name in _REQUIRES_ATTRIBUTION
+        and state.tier >= MINIMUM_TIER_FOR_CLAIM[claim]
+        and not state.attribution.supports_attribution
+    ):
+        raise ClaimCeilingViolation(
+            f"claim ceiling violated: '{claim.label}' requires a biomarker result to be present "
+            f"(A2_CONFIRMED or A3_EXCLUDED), but the twin has {state.attribution.label}. "
+            "Sensing tier is sufficient; the attribution axis is not. A biomarker is never "
+            "required for enrolment or for lower claims (ADR-0013)."
         )
     required = MINIMUM_TIER_FOR_CLAIM[claim]
     raise ClaimCeilingViolation(

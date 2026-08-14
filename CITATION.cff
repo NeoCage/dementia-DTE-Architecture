@@ -15,7 +15,7 @@ authors:
 version: 0.1.0
 date-released: 2026-07-27
 license: Apache-2.0
-repository-code: "https://github.com/NeoCage/github.com-dementia-DTE-Architecture"
+repository-code: "https://github.com/NeoCage/dementia-DTE-Architecture"
 keywords:
   - digital twin
   - brain-computer interface

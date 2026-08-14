@@ -1,6 +1,10 @@
 # ADR-0009: Do not require blood-based biomarkers at intake
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0013](0013-biomarker-as-attribution-axis.md) on 2026-07-30
+- **Why superseded:** Its revisit trigger was tested and found one-third met; its stated R1 feature
+  set had gone stale against ADR-0011; and the conversion-risk claim it was defending has been
+  withdrawn. The "no precondition" decision is *retained* by ADR-0013 - only the reasoning and the
+  mechanism changed. Kept unedited below as the record of what was decided in July 2026.
 - **Date:** 2026-07-27
 - **Deciders:** Clinical owner, patient/family representative, data-governance officer
 - **Relates to:** R1 · [§2.3](../02-requirements-and-traceability.md#23-requirement-r1--earlier-more-reliable-mci-to-dementia-risk-identification)

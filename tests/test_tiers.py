@@ -94,9 +94,39 @@ def test_lower_tier_cannot_emit_higher_claim(signals, claim):
         assert_claim_permitted(state, claim)
 
 
-@pytest.mark.parametrize("claim", list(Claim))
-def test_full_configuration_permits_every_claim(claim):
+@pytest.mark.parametrize(
+    "claim", [c for c in Claim if c is not Claim.DEVIATION_ATTRIBUTION]
+)
+def test_full_sensing_permits_every_tier_gated_claim(claim):
+    """The full sensing stack clears every claim whose ceiling is a *tier* ceiling.
+
+    ADR-0013 note: this test used to assert `list(Claim)` and was narrowed deliberately when the
+    attribution axis was added. It failed at that point, which was correct -- it was encoding the
+    pre-ADR-0013 invariant that tier alone determines everything. The companion test below asserts
+    the replacement invariant. If you are reading this because the test failed again, check whether
+    a new claim has been given a non-tier precondition before changing anything.
+    """
     assert_claim_permitted(detect_tier(FULL), claim)
+
+
+def test_full_configuration_on_both_axes_permits_every_claim():
+    """The replacement invariant: saturate *both* axes and nothing is refused."""
+    from dte.tiers import AttributionBasis
+
+    state = detect_tier(FULL, AttributionBasis.A2_CONFIRMED)
+    for claim in Claim:
+        assert_claim_permitted(state, claim)
+
+
+def test_attribution_claim_is_refused_on_full_sensing_alone():
+    """Stated as its own test so the asymmetry is visible rather than implied by a filtered list."""
+    from dte.tiers import AttributionBasis
+
+    state = detect_tier(FULL)
+    assert state.tier is Tier.T3_NEURAL
+    assert state.attribution is AttributionBasis.A0_NONE
+    with pytest.raises(ClaimCeilingViolation):
+        assert_claim_permitted(state, Claim.DEVIATION_ATTRIBUTION)
 
 
 def test_violation_message_names_the_missing_signal():
@@ -117,7 +147,15 @@ def test_there_is_no_bypass_parameter():
     import inspect
 
     sig = inspect.signature(assert_claim_permitted)
-    assert list(sig.parameters) == ["state", "claim"]
+    assert list(sig.parameters) == ["state", "claim"], (
+        "a bypass parameter has been added to the enforcement routine. Do not fix this "
+        "test -- write an ADR justifying the bypass and have someone argue with it."
+    )
+    # ADR-0013: detect_tier gained an axis, but it must be optional and keyword-safe
+    import dte.tiers as _t
+    dsig = inspect.signature(_t.detect_tier)
+    assert list(dsig.parameters) == ["available_signals", "attribution"]
+    assert dsig.parameters["attribution"].default is _t.AttributionBasis.A0_NONE
 
 
 # ---------------------------------------------------------------------------

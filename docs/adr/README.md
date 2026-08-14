@@ -28,3 +28,4 @@ without having been in the room.
 
 Copy [`0000-template.md`](0000-template.md), increment the number, and add a row above.
 See [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md#architecture-decision-records).
+| [ADR-0013](0013-biomarker-as-attribution-axis.md) | Biomarker status as an attribution axis, not a precondition | Accepted | Supersedes ADR-0009 |

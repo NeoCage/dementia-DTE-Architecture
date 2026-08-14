@@ -193,12 +193,12 @@ Each is enforced somewhere concrete, not merely asserted.
 ## Quick start
 
 ```bash
-git clone https://github.com/NeoCage/github.com-dementia-DTE-Architecture.git
+git clone https://github.com/NeoCage/dementia-DTE-Architecture.git
 cd github.com-dementia-DTE-Architecture
 
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 make dev
-make test        # 194 tests
+make test        # 223 tests
 ```
 
 ### Run the Memory Anchoring Pipeline
@@ -279,7 +279,7 @@ PYTHONPATH=src python examples/04_fhir_round_trip.py       # explanation travels
 │   ├── tiers.py                     fidelity ladder + claim ceilings (no bypass)
 │   ├── twin.py                      twin state, personal baseline, consent, provenance
 │   └── cli.py
-├── tests/                           194 tests — several are executable safety specifications
+├── tests/                           223 tests — several are executable safety specifications
 │   └── fixtures/tier_scenarios.json 12 clinical scenarios, reviewable without reading Python
 ├── examples/                        4 focused demonstrations
 ├── notebooks/                       worked synthetic analysis, runs end-to-end
@@ -451,7 +451,7 @@ clinical result — doing so would misrepresent the evidence base.
   year   = {2026},
   note   = {Companion to the DBA dissertation book. Reference architecture;
             contains no real patient data. All quantitative examples are illustrative.},
-  url    = {https://github.com/NeoCage/github.com-dementia-DTE-Architecture}
+  url    = {https://github.com/NeoCage/dementia-DTE-Architecture}
 }
 
 @book{das2026aidigitaltwins,

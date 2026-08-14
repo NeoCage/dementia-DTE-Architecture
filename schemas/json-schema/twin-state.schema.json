@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/NeoCage/github.com-dementia-DTE-Architecture/schemas/json-schema/twin-state.schema.json",
+  "$id": "https://github.com/NeoCage/dementia-DTE-Architecture/schemas/json-schema/twin-state.schema.json",
   "title": "Digital Twin State",
   "description": "Internal denormalised state document for one patient's Digital Twin. This is a PROJECTION rebuilt from FHIR R5 resources, which remain the system of record. It exists because FHIR is too verbose for the low-latency read path. If this document is lost it can be fully reconstructed; if the FHIR store is lost, the record is gone. See docs/05-data-architecture.md section 5.5.",
   "type": "object",

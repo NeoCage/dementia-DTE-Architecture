@@ -1,18 +1,20 @@
 {
   "$schema": "./tier_scenarios.schema.json",
-  "version": "1.0.0",
-  "generated": "2026-07-27",
-  "description": "Machine-readable tier scenarios for the fidelity ladder (ADR-0010, ADR-0011). Each scenario is a clinically-recognisable situation, its expected tier, and the claims the twin may and may not make in it. Loaded by tests/test_tier_scenarios.py and re-usable as documentation, demo input, or a conformance suite for any future implementation.",
+  "version": "2.0",
+  "generated": "2026-07-30",
+  "description": "Machine-readable tier scenarios for the fidelity ladder (ADR-0010, ADR-0011). Each scenario is a clinically-recognisable situation, its expected tier, and the claims the twin may and may not make in it. Loaded by tests/test_tier_scenarios.py and re-usable as documentation, demo input, or a conformance suite for any future implementation. Version 2.0 adds the attribution axis (ADR-0013): a second, orthogonal dimension governing what the twin may say about the CAUSE of a deviation, as distinct from what it can observe.",
   "signal_families": {
     "caregiver_report": "Structured caregiver and clinician entry. Requires no device.",
-    "phone_ambient": "Passive smartphone sensing — movement, screen interaction, call patterns, location if opted in.",
-    "wristband": "Consumer wristband — heart-rate variability, actigraphy, inertial measurement.",
+    "phone_ambient": "Passive smartphone sensing \u2014 movement, screen interaction, call patterns, location if opted in.",
+    "wristband": "Consumer wristband \u2014 heart-rate variability, actigraphy, inertial measurement.",
     "eeg": "Non-invasive dry-electrode EEG headband, 8-16 channels."
   },
   "tiers": {
     "T0_REPORT": {
       "ordinal": 0,
-      "requires": ["caregiver_report"],
+      "requires": [
+        "caregiver_report"
+      ],
       "ceiling": "CARE_PLAN",
       "hardware_envelope": "None beyond a device the clinician already uses.",
       "reimbursement_fit": "CPT 99483 cognitive assessment and care plan.",
@@ -20,7 +22,10 @@
     },
     "T1_AMBIENT": {
       "ordinal": 1,
-      "requires": ["caregiver_report", "phone_ambient"],
+      "requires": [
+        "caregiver_report",
+        "phone_ambient"
+      ],
       "ceiling": "DEVIATION",
       "hardware_envelope": "A smartphone the household already owns.",
       "reimbursement_fit": "GUIDE Dementia Care Management Payment; chronic care management.",
@@ -28,7 +33,11 @@
     },
     "T2_PHYSIOLOGICAL": {
       "ordinal": 2,
-      "requires": ["caregiver_report", "phone_ambient", "wristband"],
+      "requires": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband"
+      ],
       "ceiling": "CONVERSION_RISK",
       "hardware_envelope": "Smartphone plus consumer wristband.",
       "reimbursement_fit": "GUIDE DCMP at higher complexity; remote therapeutic monitoring codes.",
@@ -36,7 +45,12 @@
     },
     "T3_NEURAL": {
       "ordinal": 3,
-      "requires": ["caregiver_report", "phone_ambient", "wristband", "eeg"],
+      "requires": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband",
+        "eeg"
+      ],
       "ceiling": "CUE_OPPORTUNITY",
       "hardware_envelope": "All of T2 plus an EEG headband and the support staffing it implies.",
       "reimbursement_fit": "None. Research and trial funding only.",
@@ -48,93 +62,209 @@
       "id": "S01",
       "name": "Memory clinic intake, no devices issued",
       "narrative": "A person is seen in a memory clinic. A care plan is written and the caregiver completes a burden questionnaire. Nothing is worn home.",
-      "signals": ["caregiver_report"],
+      "signals": [
+        "caregiver_report"
+      ],
       "expected_tier": "T0_REPORT",
-      "permitted": ["CARE_PLAN"],
-      "forbidden": ["DEVIATION", "CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "missing_for_next": ["phone_ambient"],
-      "why_it_matters": "The most common real starting state. A twin must be useful here or it is not deployable at scale."
+      "permitted": [
+        "CARE_PLAN"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "missing_for_next": [
+        "phone_ambient"
+      ],
+      "why_it_matters": "The most common real starting state. A twin must be useful here or it is not deployable at scale.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S02",
       "name": "Community health worker deployment, phone only",
       "narrative": "A community health worker enrols a household with a shared smartphone. No wearable is available or affordable.",
-      "signals": ["caregiver_report", "phone_ambient"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient"
+      ],
       "expected_tier": "T1_AMBIENT",
-      "permitted": ["CARE_PLAN", "DEVIATION"],
-      "forbidden": ["CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "missing_for_next": ["wristband"],
-      "why_it_matters": "The configuration that reaches the ~71% of people with dementia projected to live in LMICs by 2050. Deviation from personal baseline is genuinely useful here; conversion risk is not supportable."
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "missing_for_next": [
+        "wristband"
+      ],
+      "why_it_matters": "The configuration that reaches the ~71% of people with dementia projected to live in LMICs by 2050. Deviation from personal baseline is genuinely useful here; conversion risk is not supportable.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S03",
       "name": "Standard home deployment",
       "narrative": "Phone plus consumer wristband, worn consistently. No neural sensing.",
-      "signals": ["caregiver_report", "phone_ambient", "wristband"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband"
+      ],
       "expected_tier": "T2_PHYSIOLOGICAL",
-      "permitted": ["CARE_PLAN", "DEVIATION", "CONVERSION_RISK"],
-      "forbidden": ["CUE_OPPORTUNITY"],
-      "missing_for_next": ["eeg"],
-      "why_it_matters": "The intended default product. Everything the clinician-facing surface needs, with no neural hardware."
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "CONVERSION_RISK"
+      ],
+      "forbidden": [
+        "CUE_OPPORTUNITY",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "missing_for_next": [
+        "eeg"
+      ],
+      "why_it_matters": "The intended default product. Everything the clinician-facing surface needs, with no neural hardware.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S04",
       "name": "Full research configuration",
       "narrative": "Academic centre, all sensing present, participant trained and supported.",
-      "signals": ["caregiver_report", "phone_ambient", "wristband", "eeg"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband",
+        "eeg"
+      ],
       "expected_tier": "T3_NEURAL",
-      "permitted": ["CARE_PLAN", "DEVIATION", "CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "forbidden": [],
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY"
+      ],
+      "forbidden": [
+        "DEVIATION_ATTRIBUTION"
+      ],
       "missing_for_next": [],
-      "why_it_matters": "The only configuration in which the Memory Anchoring Pipeline may run at all."
+      "why_it_matters": "The only configuration in which the Memory Anchoring Pipeline may run at all.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S05",
       "name": "Headband removed mid-day",
       "narrative": "A participant in the full configuration takes the headband off after lunch. Everything else keeps reporting.",
-      "signals": ["caregiver_report", "phone_ambient", "wristband"],
-      "previous_signals": ["caregiver_report", "phone_ambient", "wristband", "eeg"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband"
+      ],
+      "previous_signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband",
+        "eeg"
+      ],
       "expected_tier": "T2_PHYSIOLOGICAL",
-      "permitted": ["CARE_PLAN", "DEVIATION", "CONVERSION_RISK"],
-      "forbidden": ["CUE_OPPORTUNITY"],
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "CONVERSION_RISK"
+      ],
+      "forbidden": [
+        "CUE_OPPORTUNITY",
+        "DEVIATION_ATTRIBUTION"
+      ],
       "expect_downgrade_note": true,
-      "downgrade_note_contains": ["eeg", "memory-cue"],
-      "why_it_matters": "The modal real-world event. The twin must degrade to T2 and keep working, not continue asserting T3 claims against stale neural data."
+      "downgrade_note_contains": [
+        "eeg",
+        "memory-cue"
+      ],
+      "why_it_matters": "The modal real-world event. The twin must degrade to T2 and keep working, not continue asserting T3 claims against stale neural data.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S06",
       "name": "Wristband battery flat overnight",
       "narrative": "Wristband stops reporting; phone continues.",
-      "signals": ["caregiver_report", "phone_ambient"],
-      "previous_signals": ["caregiver_report", "phone_ambient", "wristband"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient"
+      ],
+      "previous_signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband"
+      ],
       "expected_tier": "T1_AMBIENT",
-      "permitted": ["CARE_PLAN", "DEVIATION"],
-      "forbidden": ["CONVERSION_RISK", "CUE_OPPORTUNITY"],
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION_ATTRIBUTION"
+      ],
       "expect_downgrade_note": true,
-      "downgrade_note_contains": ["wristband", "conversion"],
-      "why_it_matters": "Conversion-risk scoring must suspend, not silently continue on a thinner signal set."
+      "downgrade_note_contains": [
+        "wristband",
+        "conversion"
+      ],
+      "why_it_matters": "Conversion-risk scoring must suspend, not silently continue on a thinner signal set.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S07",
       "name": "Headband present but no phone or wristband",
       "narrative": "A misconfigured or partially-provisioned deployment: neural hardware arrives, supporting devices do not.",
-      "signals": ["caregiver_report", "eeg"],
+      "signals": [
+        "caregiver_report",
+        "eeg"
+      ],
       "expected_tier": "T0_REPORT",
-      "permitted": ["CARE_PLAN"],
-      "forbidden": ["DEVIATION", "CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "missing_for_next": ["phone_ambient"],
-      "why_it_matters": "Tiers are contiguous. Neural data without behavioural or physiological context is exactly what the MAP must not act on, so this is T0 rather than T3."
+      "permitted": [
+        "CARE_PLAN"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "missing_for_next": [
+        "phone_ambient"
+      ],
+      "why_it_matters": "Tiers are contiguous. Neural data without behavioural or physiological context is exactly what the MAP must not act on, so this is T0 rather than T3.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S08",
       "name": "Wristband without a phone to relay it",
       "narrative": "A wristband is issued but the household has no smartphone.",
-      "signals": ["caregiver_report", "wristband"],
+      "signals": [
+        "caregiver_report",
+        "wristband"
+      ],
       "expected_tier": "T0_REPORT",
-      "permitted": ["CARE_PLAN"],
-      "forbidden": ["DEVIATION", "CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "missing_for_next": ["phone_ambient"],
-      "why_it_matters": "An unreachable sensor is not a sensor. Skipping levels would let a sparse configuration claim fidelity its context cannot justify."
+      "permitted": [
+        "CARE_PLAN"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "missing_for_next": [
+        "phone_ambient"
+      ],
+      "why_it_matters": "An unreachable sensor is not a sensor. Skipping levels would let a sparse configuration claim fidelity its context cannot justify.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S09",
@@ -143,41 +273,211 @@
       "signals": [],
       "expected_tier": "T0_REPORT",
       "permitted": [],
-      "forbidden": ["CARE_PLAN", "DEVIATION", "CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "why_it_matters": "T0 is the floor, but a twin at the floor with nothing beneath it still may not make claims. Even care-plan support requires the caregiver report."
+      "forbidden": [
+        "CARE_PLAN",
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "why_it_matters": "T0 is the floor, but a twin at the floor with nothing beneath it still may not make claims. Even care-plan support requires the caregiver report.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S10",
       "name": "Unrecognised device in the signal set",
       "narrative": "A device integration reports a signal family the twin does not know about.",
-      "signals": ["caregiver_report", "phone_ambient", "smart_toaster"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "smart_toaster"
+      ],
       "expected_tier": "T1_AMBIENT",
-      "permitted": ["CARE_PLAN", "DEVIATION"],
-      "forbidden": ["CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "expect_unknown": ["smart_toaster"],
-      "why_it_matters": "A typo in an integration must surface as an explained tier, not as a mysteriously absent alert."
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "expect_unknown": [
+        "smart_toaster"
+      ],
+      "why_it_matters": "A typo in an integration must surface as an explained tier, not as a mysteriously absent alert.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S11",
       "name": "Signal names with inconsistent casing and whitespace",
       "narrative": "An upstream system sends signal names in mixed case with padding.",
-      "signals": [" Caregiver_Report ", "PHONE_AMBIENT", "WristBand"],
+      "signals": [
+        " Caregiver_Report ",
+        "PHONE_AMBIENT",
+        "WristBand"
+      ],
       "expected_tier": "T2_PHYSIOLOGICAL",
-      "permitted": ["CARE_PLAN", "DEVIATION", "CONVERSION_RISK"],
-      "forbidden": ["CUE_OPPORTUNITY"],
-      "why_it_matters": "Normalisation failure would silently downgrade a fully-provisioned patient."
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "CONVERSION_RISK"
+      ],
+      "forbidden": [
+        "CUE_OPPORTUNITY",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "why_it_matters": "Normalisation failure would silently downgrade a fully-provisioned patient.",
+      "attribution": "A0_NONE"
     },
     {
       "id": "S12",
       "name": "Fidelity restored when the headband goes back on",
       "narrative": "The participant from S05 puts the headband back on the following morning.",
-      "signals": ["caregiver_report", "phone_ambient", "wristband", "eeg"],
-      "previous_signals": ["caregiver_report", "phone_ambient", "wristband"],
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband",
+        "eeg"
+      ],
+      "previous_signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband"
+      ],
       "expected_tier": "T3_NEURAL",
-      "permitted": ["CARE_PLAN", "DEVIATION", "CONVERSION_RISK", "CUE_OPPORTUNITY"],
-      "forbidden": [],
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY"
+      ],
+      "forbidden": [
+        "DEVIATION_ATTRIBUTION"
+      ],
       "expect_downgrade_note": false,
-      "why_it_matters": "Recovery must be automatic and must not emit a downgrade note. Tier is derived per evaluation, so nothing needs re-enrolling."
+      "why_it_matters": "Recovery must be automatic and must not emit a downgrade note. Tier is derived per evaluation, so nothing needs re-enrolling.",
+      "attribution": "A0_NONE"
+    },
+    {
+      "id": "S13",
+      "name": "Ambient sensing with a positive biomarker already in the record",
+      "narrative": "A household has a phone and a weekly caregiver report. A plasma p-tau217 result from a prior clinic visit is positive and sits in the record. No wearable, no headband.",
+      "signals": [
+        "caregiver_report",
+        "phone_ambient"
+      ],
+      "attribution": "A2_CONFIRMED",
+      "expected_tier": "T1_AMBIENT",
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "forbidden": [
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY"
+      ],
+      "missing_for_next": [
+        "wristband"
+      ],
+      "why_it_matters": "The cell that justifies the whole ADR. A cheap configuration plus a test the patient already had can say something a full sensing stack without the test cannot."
+    },
+    {
+      "id": "S14",
+      "name": "Full sensing stack, no biomarker",
+      "narrative": "A well-resourced participant wears everything: phone, wristband, EEG headband. No biomarker test has ever been ordered.",
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband",
+        "eeg"
+      ],
+      "attribution": "A0_NONE",
+      "expected_tier": "T3_NEURAL",
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY"
+      ],
+      "forbidden": [
+        "DEVIATION_ATTRIBUTION"
+      ],
+      "missing_for_next": [],
+      "why_it_matters": "Establishes orthogonality. The highest sensing tier still may not attribute a cause. If this scenario ever passes with DEVIATION_ATTRIBUTION permitted, the axes have been collapsed into one and ADR-0013 has been violated."
+    },
+    {
+      "id": "S15",
+      "name": "Negative biomarker redirects toward a reversible cause",
+      "narrative": "A phone-and-wristband household shows a three-week sleep and activity deviation. The biomarker result is negative. The navigator should be looking for a medication, an infection, or a collapsed care arrangement.",
+      "signals": [
+        "caregiver_report",
+        "phone_ambient",
+        "wristband"
+      ],
+      "attribution": "A3_EXCLUDED",
+      "expected_tier": "T2_PHYSIOLOGICAL",
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION",
+        "CONVERSION_RISK"
+      ],
+      "forbidden": [
+        "CUE_OPPORTUNITY"
+      ],
+      "missing_for_next": [
+        "eeg"
+      ],
+      "why_it_matters": "A negative result is not a null result. This is the scenario the pilot's first forty households actually looked like, and the one where the axis changes what a navigator does next."
+    },
+    {
+      "id": "S16",
+      "name": "Clinical diagnosis without biomarker confirmation",
+      "narrative": "A diagnosis of Alzheimer's disease is recorded in the chart, made on clinical grounds four years ago. No biomarker has ever been drawn.",
+      "signals": [
+        "caregiver_report",
+        "phone_ambient"
+      ],
+      "attribution": "A1_CLINICAL",
+      "expected_tier": "T1_AMBIENT",
+      "permitted": [
+        "CARE_PLAN",
+        "DEVIATION"
+      ],
+      "forbidden": [
+        "DEVIATION_ATTRIBUTION",
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY"
+      ],
+      "missing_for_next": [
+        "wristband"
+      ],
+      "why_it_matters": "A1 is deliberately not a basis for attribution. A diagnosis made on clinical grounds is a statement about the person; it is not evidence about the cause of a particular deviation observed this month."
+    },
+    {
+      "id": "S17",
+      "name": "Empty record with a positive biomarker",
+      "narrative": "A biomarker result has been filed against a record where nothing else has ever reported - no caregiver entry, no devices.",
+      "signals": [],
+      "attribution": "A2_CONFIRMED",
+      "expected_tier": "T0_REPORT",
+      "permitted": [],
+      "forbidden": [
+        "CARE_PLAN",
+        "DEVIATION",
+        "DEVIATION_ATTRIBUTION",
+        "CONVERSION_RISK",
+        "CUE_OPPORTUNITY"
+      ],
+      "why_it_matters": "A biomarker cannot rescue an empty record. Viability is a precondition for both axes, and a lab result is not a substitute for anyone having observed the person."
     }
-  ]
+  ],
+  "attribution_bases": {
+    "A0_NONE": "No biomarker information. The default, and never a barrier to enrolment or to lower claims.",
+    "A1_CLINICAL": "A clinical diagnosis exists without biomarker confirmation.",
+    "A2_CONFIRMED": "A biomarker result is present and positive.",
+    "A3_EXCLUDED": "A biomarker result is present and negative - as informative as a positive, and often more actionable."
+  }
 }

@@ -1,8 +1,64 @@
 # Changelog
 
+## [Unreleased] - 2026-07-30
+
+### Added
+- **ADR-0013: biomarker status as an attribution axis.** A second dimension, orthogonal to the
+  sensing tier, governing what the twin may say about the *cause* of a deviation rather than what it
+  can observe. New claim `DEVIATION_ATTRIBUTION` requires T1-or-above **and** a present biomarker
+  result (positive or negative). Supersedes ADR-0009, which retained the "no precondition" decision
+  but on reasoning that had gone stale.
+- `AttributionBasis` enum (`A0_NONE`, `A1_CLINICAL`, `A2_CONFIRMED`, `A3_EXCLUDED`) in
+  `src/dte/tiers.py`. `A3_EXCLUDED` licenses attribution exactly as `A2_CONFIRMED` does: a negative
+  result is frequently the more actionable of the two because it redirects toward a reversible cause.
+- Scenarios S13-S17 in `tests/fixtures/tier_scenarios.json`, including the two that establish
+  orthogonality (T3 without a biomarker is refused; T1 with one is permitted).
+- Tests: 194 -> 223. New coverage for axis orthogonality, negative-result parity, A1 insufficiency,
+  biomarker-cannot-rescue-an-empty-record, and refusal messages that name *which* axis failed.
+
+### Changed
+- `test_full_configuration_permits_every_claim` narrowed to tier-gated claims and renamed. It failed
+  when the axis was added, which was correct - it encoded the pre-ADR-0013 invariant that tier alone
+  determines everything. The replacement invariant is asserted separately, and the reason is recorded
+  in the test body rather than in a commit message.
+- `detect_tier()` takes an optional `attribution` argument defaulting to `A0_NONE`, so every existing
+  caller is unaffected. The no-bypass signature test now also asserts this default.
+
+### Known gaps
+- **The fairness gate still certifies in aggregate, and now needs to certify per *cell*.** A 4x4
+  tier-by-attribution grid has cells that will fall below `n >= 30` long before the aggregate does.
+  This is the principal accepted cost of ADR-0013 and remains the most likely source of a future
+  correctness defect.
+
+
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased] — reference verification pass, July 2026
+
+### Removed — unverifiable claims
+
+Every numeric claim in this documentation was checked against PubMed or the issuing body.
+Claims that could not be traced to a retrievable publication have been **removed**, together with
+the reference entries that supported them. `docs/REFERENCES.md` records each removal and its
+disposition.
+
+Removed claims include: "~88% accuracy" for multimodal ensembles; "~81% vs ~73% for conventional
+CSF analysis" for AI-EEG transition prediction; "15–20 point accuracy losses on minority
+populations"; "~70% accuracy in under-represented populations"; "10–15% ambulatory EEG quality
+degradation"; "~30% improvement in clinician confidence" from explainable AI; and "~18% improvement
+in recall tasks" for personalised memory tools.
+
+The design decisions those figures were used to justify are unchanged. They are now argued on their
+own terms in the relevant ADRs rather than by appeal to an unverifiable number.
+
+### Changed
+- `docs/REFERENCES.md` rebuilt with full bibliographic detail and a DOI or URL for every entry.
+  Previous revision contained 17 descriptive entries with no author, title or identifier.
+- README performance comparison replaced with verified figures: AUC 0.89 / 77% accuracy for
+  EEG+ERP discrimination of MCI [16]; stage-dependent AUCs of 0.98 / 0.84 / 0.78 [4]; and the
+  methodological finding that a quarter of studies in this field have test-set problems [17].
 
 ## [Unreleased]
 

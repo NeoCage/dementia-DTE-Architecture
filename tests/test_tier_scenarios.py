@@ -27,6 +27,7 @@ from dte.tiers import (
     Claim,
     ClaimCeilingViolation,
     Tier,
+    AttributionBasis,
     assert_claim_permitted,
     detect_tier,
     downgrade_note,
@@ -76,9 +77,19 @@ def test_every_scenario_declares_expected_tier_and_claims():
 # ---------------------------------------------------------------------------
 
 
+def _basis(scenario):
+    """Attribution basis declared by a scenario, defaulting to A0_NONE (ADR-0013).
+
+    Defaulted rather than required so that the twelve pre-ADR-0013 scenarios keep working
+    unchanged -- which is itself the property the ADR claims: the axis never blocks anything that
+    worked before it existed.
+    """
+    return getattr(AttributionBasis, scenario.get("attribution", "A0_NONE"))
+
+
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=IDS)
 def test_scenario_yields_expected_tier(scenario):
-    state = detect_tier(scenario["signals"])
+    state = detect_tier(scenario["signals"], _basis(scenario))
     expected = getattr(Tier, scenario["expected_tier"])
     assert state.tier is expected, (
         f"{scenario['id']} ({scenario['name']}): expected {expected.name}, "
@@ -88,14 +99,14 @@ def test_scenario_yields_expected_tier(scenario):
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=IDS)
 def test_scenario_permits_exactly_what_it_should(scenario):
-    state = detect_tier(scenario["signals"])
+    state = detect_tier(scenario["signals"], _basis(scenario))
     for name in scenario.get("permitted", []):
         assert_claim_permitted(state, getattr(Claim, name))
 
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=IDS)
 def test_scenario_forbids_exactly_what_it_should(scenario):
-    state = detect_tier(scenario["signals"])
+    state = detect_tier(scenario["signals"], _basis(scenario))
     for name in scenario.get("forbidden", []):
         claim = getattr(Claim, name)
         with pytest.raises(ClaimCeilingViolation):
@@ -107,7 +118,7 @@ def test_scenario_forbids_exactly_what_it_should(scenario):
     ids=[s["id"] for s in SCENARIOS if "missing_for_next" in s],
 )
 def test_scenario_reports_what_blocks_the_next_tier(scenario):
-    state = detect_tier(scenario["signals"])
+    state = detect_tier(scenario["signals"], _basis(scenario))
     assert sorted(state.missing_for_next) == sorted(scenario["missing_for_next"])
 
 
@@ -116,7 +127,7 @@ def test_scenario_reports_what_blocks_the_next_tier(scenario):
     ids=[s["id"] for s in SCENARIOS if "expect_unknown" in s],
 )
 def test_scenario_records_unrecognised_signals(scenario):
-    state = detect_tier(scenario["signals"])
+    state = detect_tier(scenario["signals"], _basis(scenario))
     for name in scenario["expect_unknown"]:
         assert name in state.unknown
         assert name in state.explain()
@@ -133,8 +144,8 @@ TRANSITIONS = [s for s in SCENARIOS if "previous_signals" in s]
     "scenario", TRANSITIONS, ids=[s["id"] for s in TRANSITIONS]
 )
 def test_scenario_transition_emits_the_right_note(scenario):
-    previous = detect_tier(scenario["previous_signals"])
-    current = detect_tier(scenario["signals"])
+    previous = detect_tier(scenario["previous_signals"], _basis(scenario))
+    current = detect_tier(scenario["signals"], _basis(scenario))
     note = downgrade_note(previous, current)
 
     if scenario.get("expect_downgrade_note"):
@@ -163,3 +174,76 @@ def test_scenarios_cover_every_claim_in_both_directions():
     all_claims = {c.name for c in Claim}
     assert all_claims - permitted == set(), f"never permitted anywhere: {all_claims - permitted}"
     assert all_claims - forbidden == set(), f"never forbidden anywhere: {all_claims - forbidden}"
+
+
+# ---------------------------------------------------------------------------
+# ADR-0013: the attribution axis
+# ---------------------------------------------------------------------------
+
+def test_every_scenario_declares_a_valid_attribution_basis():
+    for s in SCENARIOS:
+        name = s.get("attribution", "A0_NONE")
+        assert hasattr(AttributionBasis, name), f"{s['id']} declares unknown basis {name!r}"
+
+
+def test_scenarios_cover_every_attribution_basis():
+    covered = {s.get("attribution", "A0_NONE") for s in SCENARIOS}
+    missing = {b.name for b in AttributionBasis} - covered
+    assert not missing, f"attribution bases never exercised by any scenario: {missing}"
+
+
+def test_the_axes_are_orthogonal_not_ordered():
+    """The highest sensing tier must not confer attribution, and the lowest must not withhold it.
+
+    This is the property most likely to be broken by a future refactor that "simplifies" the two
+    axes into one ordered scale. Both directions are asserted.
+    """
+    t3_no_marker = detect_tier(
+        ["caregiver_report", "phone_ambient", "wristband", "eeg"], AttributionBasis.A0_NONE
+    )
+    t1_with_marker = detect_tier(
+        ["caregiver_report", "phone_ambient"], AttributionBasis.A2_CONFIRMED
+    )
+    assert not t3_no_marker.permits(Claim.DEVIATION_ATTRIBUTION)
+    assert t1_with_marker.permits(Claim.DEVIATION_ATTRIBUTION)
+    # ...and the tier axis is still doing its own job independently
+    assert t3_no_marker.permits(Claim.CUE_OPPORTUNITY)
+    assert not t1_with_marker.permits(Claim.CUE_OPPORTUNITY)
+
+
+def test_a_negative_biomarker_is_as_licensing_as_a_positive():
+    """A3_EXCLUDED must permit attribution. An axis that only rewarded positives would discard
+    half the information, and the negative result is frequently the more actionable one."""
+    for basis in (AttributionBasis.A2_CONFIRMED, AttributionBasis.A3_EXCLUDED):
+        state = detect_tier(["caregiver_report", "phone_ambient"], basis)
+        assert state.permits(Claim.DEVIATION_ATTRIBUTION), basis
+
+
+def test_clinical_diagnosis_alone_is_not_an_attribution_basis():
+    state = detect_tier(["caregiver_report", "phone_ambient"], AttributionBasis.A1_CLINICAL)
+    assert not state.permits(Claim.DEVIATION_ATTRIBUTION)
+
+
+def test_a_biomarker_cannot_rescue_an_empty_record():
+    state = detect_tier([], AttributionBasis.A2_CONFIRMED)
+    assert not state.viable
+    for claim in Claim:
+        assert not state.permits(claim), claim
+
+
+def test_refusal_message_distinguishes_which_axis_failed():
+    t3 = detect_tier(["caregiver_report", "phone_ambient", "wristband", "eeg"])
+    with pytest.raises(ClaimCeilingViolation) as exc:
+        assert_claim_permitted(t3, Claim.DEVIATION_ATTRIBUTION)
+    msg = str(exc.value).lower()
+    assert "biomarker" in msg, "an operator must be able to tell this from a missing sensor"
+    assert "sensing tier is sufficient" in msg
+
+
+def test_the_axis_defaults_to_permissive_for_existing_callers():
+    """ADR-0013 promises the axis never blocks what worked before it. A caller that passes no
+    basis must still get every pre-existing claim its tier allows."""
+    state = detect_tier(["caregiver_report", "phone_ambient", "wristband"])
+    assert state.attribution is AttributionBasis.A0_NONE
+    for claim in (Claim.CARE_PLAN, Claim.DEVIATION, Claim.CONVERSION_RISK):
+        assert state.permits(claim), claim
