@@ -69,7 +69,7 @@ and mark the old one `Superseded by ADR-NNNN`.
 
 ```bash
 git clone https://github.com/NeoCage/dementia-DTE-Architecture.git
-cd github.com-dementia-DTE-Architecture
+cd dementia-DTE-Architecture
 
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 make dev

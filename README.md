@@ -194,7 +194,7 @@ Each is enforced somewhere concrete, not merely asserted.
 
 ```bash
 git clone https://github.com/NeoCage/dementia-DTE-Architecture.git
-cd github.com-dementia-DTE-Architecture
+cd dementia-DTE-Architecture
 
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 make dev
@@ -280,7 +280,7 @@ PYTHONPATH=src python examples/04_fhir_round_trip.py       # explanation travels
 │   ├── twin.py                      twin state, personal baseline, consent, provenance
 │   └── cli.py
 ├── tests/                           223 tests — several are executable safety specifications
-│   └── fixtures/tier_scenarios.json 12 clinical scenarios, reviewable without reading Python
+│   └── fixtures/tier_scenarios.json 17 clinical scenarios, reviewable without reading Python
 ├── examples/                        4 focused demonstrations
 ├── notebooks/                       worked synthetic analysis, runs end-to-end
 └── diagrams/                        Mermaid sources for export
