@@ -22,6 +22,11 @@ jobs:
   distribution:
     name: Build and verify the Python distribution
     runs-on: ubuntu-latest
+    # Creating a release to attach the sdist and wheel to is a write to repository
+    # contents. Declared here rather than relying on the repository default, so the
+    # workflow states the access it needs and nothing broader.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
