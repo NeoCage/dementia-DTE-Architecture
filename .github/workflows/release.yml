@@ -1,0 +1,121 @@
+name: Package
+
+# GitHub Packages does not host Python distributions, so the package published
+# for this repository is a container image on ghcr.io. The Python sdist and
+# wheel are built on every run and attached to tagged releases, so the
+# distribution stays available even though it is not on PyPI.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # -------------------------------------------------------------------------
+  # The distribution must import and run before anything is published.
+  # -------------------------------------------------------------------------
+  distribution:
+    name: Build and verify the Python distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      # Installing into a clean environment is the check that matters: it fails
+      # if a module was added to src/ but never packaged, which a test run
+      # against the source tree would not catch.
+      - name: Install the wheel into a clean environment and exercise it
+        run: |
+          python -m venv /tmp/verify
+          /tmp/verify/bin/pip install --upgrade pip
+          /tmp/verify/bin/pip install dist/*.whl
+          /tmp/verify/bin/python - <<'PY'
+          import dte
+          from dte.tiers import AttributionBasis, Tier
+          assert dte.NOT_A_MEDICAL_DEVICE is True
+          assert dte.USES_SYNTHETIC_DATA_ONLY is True
+          assert [t.name for t in Tier] == [
+              "T0_REPORT", "T1_AMBIENT", "T2_PHYSIOLOGICAL", "T3_NEURAL"
+          ]
+          assert [a.name for a in AttributionBasis] == [
+              "A0_NONE", "A1_CLINICAL", "A2_CONFIRMED", "A3_EXCLUDED"
+          ]
+          print("verified", dte.__version__)
+          PY
+          /tmp/verify/bin/dte simulate --seed 42 > /dev/null
+          /tmp/verify/bin/dte risk --patient-index 0 > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-distribution
+          path: dist/*
+
+      - name: Attach the distribution to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+
+  # -------------------------------------------------------------------------
+  # The published package.
+  # -------------------------------------------------------------------------
+  container:
+    name: Publish the container package to GHCR
+    runs-on: ubuntu-latest
+    needs: distribution
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # A published image that cannot run is worse than no image, because the
+      # package page implies it works.
+      - name: Smoke-test the published image
+        run: |
+          IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          docker run --rm "$IMAGE" simulate --seed 42 | head -n 5
+          docker run --rm "$IMAGE" --help > /dev/null

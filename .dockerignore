@@ -1,0 +1,34 @@
+# Keep the build context small and deterministic. The image is built from
+# pyproject.toml and src/ only; everything below is either irrelevant to the
+# runtime or would invalidate the build cache without changing the artefact.
+
+.git
+.github
+.run
+
+docs/
+diagrams/
+notebooks/
+examples/
+tests/
+schemas/
+scripts/
+
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+.venv/
+venv/
+
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+CITATION.cff
+Makefile
+PUSH.sh
+requirements*.txt

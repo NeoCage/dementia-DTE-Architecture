@@ -190,6 +190,26 @@ Each is enforced somewhere concrete, not merely asserted.
 
 ---
 
+## Run it without installing anything
+
+A container image is published to GitHub Packages on every change to `main`. It
+carries the reference implementation and its dependencies, and its entrypoint is
+the `dte` CLI, so the fidelity-ladder scenarios can be run without a Python
+toolchain:
+
+```bash
+docker run --rm ghcr.io/neocage/dementia-dte-architecture:latest simulate --seed 42
+docker run --rm ghcr.io/neocage/dementia-dte-architecture:latest risk --patient-index 0
+docker run --rm ghcr.io/neocage/dementia-dte-architecture:latest fairness --n 2000 --noise 4.0
+```
+
+The image runs as a non-root user, needs no GPU, and carries the
+not-a-medical-device and synthetic-data-only status as OCI labels. It is a
+research prototype: every figure it prints is generated from synthetic data.
+
+The Python sdist and wheel are built and verified by the same workflow and are
+attached to each tagged release.
+
 ## Quick start
 
 ```bash
