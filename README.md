@@ -244,9 +244,9 @@ is the acceptance test for that diagram.
 
 [`docs/demo/index.html`](docs/demo/index.html) is a self-contained page: one household's
 ninety-day record drawn from the engine's own trace, with a narrated walkthrough of what each
-part means, and an interactive console for the claim ceiling. Open the file in a browser —
-no build step, no server, no network. Published at
-**https://neocage.github.io/dementia-DTE-Architecture/demo/**
+part means, and an interactive console for the claim ceiling. Clone the repository and open that file in a browser — no build step, no server, no
+network. (To serve it publicly instead, enable GitHub Pages on `main` with the `/docs`
+folder; the page then lives at `/demo/`.)
 
 ### The one thing to try if you only have five minutes
 
