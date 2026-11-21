@@ -54,7 +54,7 @@ from dte.fusion.detector import (
     FusionInput,
     OpportunityDetector,
 )
-from dte.models.decline import DeviationDetector
+from dte.models.decline import DeviationDetector, forecast_trajectory
 from dte.policy.cue_selector import CueSelector
 from dte.tiers import (
     AttributionBasis,
@@ -65,7 +65,7 @@ from dte.tiers import (
     detect_tier,
     downgrade_note,
 )
-from dte.twin import TwinState
+from dte.twin import Trajectory, TwinState
 
 # Signal family -> the consent attribute that must be true before it may be READ.
 # A family with no entry here needs no specific consent beyond enrolment.
@@ -219,6 +219,8 @@ class TwinEngine:
         self.deviation_features = deviation_features or ["gait_speed"]
 
         self._history: dict[str, deque[float]] = {}
+        self._anchors: dict[str, list[tuple[float, float]]] = {}
+        self._origin: Optional[datetime] = None
         self._last_tier: Optional[TierState] = None
         self._last_cue_at: Optional[datetime] = None
         self._cues_today: dict[str, int] = {}
@@ -297,7 +299,12 @@ class TwinEngine:
                 )
             )
 
-        # 5. Candidate claims, in ascending order of what they require.
+        # 5. The forward projection. Declared as a twin component in docs/03 §3.0 and written
+        #    here, because it is a property of the record rather than of any single claim. It
+        #    suppresses its own point estimate when the history cannot support one.
+        self._update_trajectory()
+
+        # 6. Candidate claims, in ascending order of what they require.
         self._guarded(Claim.CARE_PLAN, tier_state, result, lambda: self._care_plan(obs, stale))
         self._guarded(Claim.DEVIATION, tier_state, result, lambda: self._deviation(result, stale))
         self._guarded(
@@ -345,6 +352,9 @@ class TwinEngine:
             device_id=obs.device_id,
             at=now,
         )
+        if self._origin is None:
+            self._origin = now
+        months = (now - self._origin).total_seconds() / (30.44 * 86400.0)
         for bucket in (obs.phone_ambient, obs.wristband, obs.eeg):
             if not bucket:
                 continue
@@ -352,6 +362,28 @@ class TwinEngine:
                 if value is None:
                     continue
                 self._history.setdefault(name, deque(maxlen=_HISTORY)).append(float(value))
+                self._anchors.setdefault(name, []).append((months, float(value)))
+
+    def _update_trajectory(self) -> None:
+        feature = self.deviation_features[0] if self.deviation_features else None
+        anchors = self._anchors.get(feature or "", [])
+        if len(anchors) < 2:
+            return
+        times = [a[0] for a in anchors]
+        values = [a[1] for a in anchors]
+        forecast = forecast_trajectory(
+            times, values, horizon_months=12.0, metric=feature or "", max_usable_ci_width=0.6
+        )
+        self.twin.trajectory = Trajectory(
+            horizon_months=forecast.horizon_months,
+            metric=forecast.metric,
+            projected_values=list(forecast.projected_values),
+            ci_lower=list(forecast.ci_lower),
+            ci_upper=list(forecast.ci_upper),
+            confidence=forecast.confidence,
+            point_estimate_suppressed=forecast.point_estimate_suppressed,
+            anchor_observations=[f"n={forecast.n_anchors}"],
+        )
 
     # ---- claim builders. Each returns (payload, explanation) or None.
     def _care_plan(self, obs: Observation, stale: bool) -> Optional[tuple[dict[str, Any], str]]:
@@ -362,6 +394,13 @@ class TwinEngine:
                 "burden_tracking": True,
                 "baseline_established": self.twin.baseline.is_established,
                 "observations": self.twin.baseline.n_observations,
+                "trajectory": None
+                if self.twin.trajectory is None
+                else {
+                    "metric": self.twin.trajectory.metric,
+                    "suppressed": self.twin.trajectory.point_estimate_suppressed,
+                    "confidence": round(self.twin.trajectory.confidence, 3),
+                },
             },
             "care-plan support available; "
             + (
