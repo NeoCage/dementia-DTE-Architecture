@@ -154,9 +154,7 @@ _TIER_REQUIREMENTS: dict[Tier, frozenset[str]] = {
     Tier.T3_NEURAL: frozenset({"caregiver_report", "phone_ambient", "wristband", "eeg"}),
 }
 
-KNOWN_SIGNALS: frozenset[str] = frozenset(
-    {"caregiver_report", "phone_ambient", "wristband", "eeg"}
-)
+KNOWN_SIGNALS: frozenset[str] = frozenset({"caregiver_report", "phone_ambient", "wristband", "eeg"})
 
 
 class ClaimCeilingViolation(RuntimeError):
@@ -233,9 +231,7 @@ class TierState:
                 + "."
             )
         if self.unknown:
-            base += (
-                " Ignored unrecognised signal(s): " + ", ".join(sorted(self.unknown)) + "."
-            )
+            base += " Ignored unrecognised signal(s): " + ", ".join(sorted(self.unknown)) + "."
         return base
 
     def to_dict(self) -> dict[str, object]:

@@ -114,7 +114,8 @@ def test_scenario_forbids_exactly_what_it_should(scenario):
 
 
 @pytest.mark.parametrize(
-    "scenario", [s for s in SCENARIOS if "missing_for_next" in s],
+    "scenario",
+    [s for s in SCENARIOS if "missing_for_next" in s],
     ids=[s["id"] for s in SCENARIOS if "missing_for_next" in s],
 )
 def test_scenario_reports_what_blocks_the_next_tier(scenario):
@@ -123,7 +124,8 @@ def test_scenario_reports_what_blocks_the_next_tier(scenario):
 
 
 @pytest.mark.parametrize(
-    "scenario", [s for s in SCENARIOS if "expect_unknown" in s],
+    "scenario",
+    [s for s in SCENARIOS if "expect_unknown" in s],
     ids=[s["id"] for s in SCENARIOS if "expect_unknown" in s],
 )
 def test_scenario_records_unrecognised_signals(scenario):
@@ -140,9 +142,7 @@ def test_scenario_records_unrecognised_signals(scenario):
 TRANSITIONS = [s for s in SCENARIOS if "previous_signals" in s]
 
 
-@pytest.mark.parametrize(
-    "scenario", TRANSITIONS, ids=[s["id"] for s in TRANSITIONS]
-)
+@pytest.mark.parametrize("scenario", TRANSITIONS, ids=[s["id"] for s in TRANSITIONS])
 def test_scenario_transition_emits_the_right_note(scenario):
     previous = detect_tier(scenario["previous_signals"], _basis(scenario))
     current = detect_tier(scenario["signals"], _basis(scenario))
@@ -179,6 +179,7 @@ def test_scenarios_cover_every_claim_in_both_directions():
 # ---------------------------------------------------------------------------
 # ADR-0013: the attribution axis
 # ---------------------------------------------------------------------------
+
 
 def test_every_scenario_declares_a_valid_attribution_basis():
     for s in SCENARIOS:

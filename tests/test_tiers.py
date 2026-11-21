@@ -95,9 +95,7 @@ def test_lower_tier_cannot_emit_higher_claim(signals, claim):
         assert_claim_permitted(state, claim)
 
 
-@pytest.mark.parametrize(
-    "claim", [c for c in Claim if c is not Claim.DEVIATION_ATTRIBUTION]
-)
+@pytest.mark.parametrize("claim", [c for c in Claim if c is not Claim.DEVIATION_ATTRIBUTION])
 def test_full_sensing_permits_every_tier_gated_claim(claim):
     """The full sensing stack clears every claim whose ceiling is a *tier* ceiling.
 
@@ -154,6 +152,7 @@ def test_there_is_no_bypass_parameter():
     )
     # ADR-0013: detect_tier gained an axis, but it must be optional and keyword-safe
     import dte.tiers as _t
+
     dsig = inspect.signature(_t.detect_tier)
     assert list(dsig.parameters) == ["available_signals", "attribution"]
     assert dsig.parameters["attribution"].default is _t.AttributionBasis.A0_NONE
