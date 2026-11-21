@@ -2,6 +2,7 @@
 
 Usage::
 
+    dte twin --days 90
     dte simulate --patient-id demo-001 --hours 24 --seed 42
     dte risk --patient-index 0
     dte fairness --noise 2.5
@@ -15,18 +16,21 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import numpy as np
 
 from dte import __version__
 from dte.data.synthetic import generate_cohort, generate_day, generate_eeg, generate_rr_intervals
+from dte.engine import Observation, TwinEngine
 from dte.fairness.subgroup import evaluate_fairness
 from dte.fusion.detector import FusionInput, OpportunityDetector
 from dte.models.risk import RiskModel
 from dte.policy.cue_selector import CueSelector, Response
 from dte.signals.eeg import extract_eeg_features
 from dte.signals.hrv import extract_hrv_features
+from dte.twin import ConsentSnapshot, TwinState
 
 BANNER = (
     "=" * 78
@@ -123,6 +127,91 @@ def cmd_simulate(args: argparse.Namespace) -> int:
         "\nNOTE: silence is the majority outcome by design. The MAP is precision-weighted — "
         "built to miss\nopportunities rather than fire wrongly. A missed cue costs one moment; "
         "a wrong cue costs trust."
+    )
+    return 0
+
+
+def cmd_twin(args: argparse.Namespace) -> int:
+    """Walk one household through a changing sensing configuration, through the engine.
+
+    This is the command that shows the twin itself rather than any single component: state
+    accumulating, the fidelity tier being re-derived on every evaluation, and claims being
+    permitted or refused as a consequence.
+    """
+    print(BANNER)
+    print(f"\nTWIN LIFECYCLE — {args.days} days for {args.patient_id}\n")
+
+    twin = TwinState(
+        patient_id=args.patient_id,
+        consent=ConsentSnapshot(
+            location_data=True,
+            wearable_physiology=True,
+            neural_data=True,
+            cue_delivery=True,
+        ),
+    )
+    engine = TwinEngine(twin)
+    start = datetime.now(timezone.utc) - timedelta(days=args.days)
+    rng = np.random.default_rng(args.seed)
+
+    milestones = {
+        10: "phone sensing begins",
+        30: "wristband issued",
+        40: "EEG headband trial begins",
+        55: "headband and wristband returned",
+        80: "phone replaced; ambient sensing lost",
+    }
+    emitted = 0
+    refused = 0
+
+    for day in range(args.days):
+        at = start + timedelta(days=day)
+        if 70 <= day < 74:
+            continue  # household goes dark
+
+        phone = 10 <= day < 80
+        band = 30 <= day < 55
+        eeg = 40 <= day < 55
+        gait = 1.10 if day < 60 else 1.10 - 0.035 * (day - 59)
+        gait += float(rng.normal(0, 0.01))
+
+        result = engine.ingest(
+            Observation(
+                patient_id=args.patient_id,
+                at=at,
+                caregiver_report={"mood": "settled"},
+                phone_ambient={"gait_speed": gait} if phone else None,
+                wristband={"hrv_rmssd": 34.0, "agitation_index": 0.2} if band else None,
+                eeg={"theta_alpha_ratio": 1.4} if eeg else None,
+                place_class="kitchen",
+                place_significance=0.8,
+                eligible_content_count=3,
+                signal_quality=0.9,
+            )
+        )
+        emitted += len(result.emissions)
+        refused += len(result.suppressions)
+
+        if day in milestones:
+            print(f"--- day {day}: {milestones[day]}")
+        if day in milestones or day == args.days - 1 or result.downgrade:
+            print(f"day {day:>3}  " + result.explain().replace("\n", "\n         "))
+            print()
+
+    print("-" * 78)
+    print(f"evaluations run   : {args.days - 4}")
+    print(f"claims emitted    : {emitted}")
+    print(f"claims refused    : {refused}")
+    print(f"provenance records: {len(twin.provenance)}")
+    print(
+        f"baseline          : "
+        f"{'established' if twin.baseline.is_established else 'not established'} "
+        f"({twin.baseline.n_observations} observations)"
+    )
+    print(
+        "\nNOTE: every refusal above carries a reason code. The ceiling is enforced in "
+        "TwinEngine._guarded,\nwhich is the only path by which a claim leaves the engine. "
+        "Delete that check and tests/test_engine.py\nfails."
     )
     return 0
 
@@ -251,6 +340,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_sim.add_argument("--hours", type=int, default=24)
     p_sim.add_argument("--seed", type=int, default=42)
     p_sim.set_defaults(func=cmd_simulate)
+
+    p_twin = sub.add_parser(
+        "twin", help="walk one household through the full engine as sensing changes"
+    )
+    p_twin.add_argument("--patient-id", default="household-001")
+    p_twin.add_argument("--days", type=int, default=90)
+    p_twin.add_argument("--seed", type=int, default=42)
+    p_twin.set_defaults(func=cmd_twin)
 
     p_risk = sub.add_parser("risk", help="score one synthetic patient with reasoning")
     p_risk.add_argument("--patient-index", type=int, default=0)
