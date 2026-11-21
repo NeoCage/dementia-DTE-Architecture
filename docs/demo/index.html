@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px/1.5 system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Claim Ceiling Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an instrument panel — inputs on the left rail, derived state and the claim register on the right. */
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --sunk:#eef1f5; --line:#d8dee6;
+  --fg:#16202b; --muted:#5d6b7a; --faint:#8694a3;
+  --accent:#1f5f8b; --accent-soft:#e4eef5;
+  --ok:#1d6f52; --ok-soft:#e2f0ea;
+  --stop:#9a3324; --stop-soft:#f7e7e4;
+  --hold:#8a6116; --hold-soft:#f8efdc;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d; --panel:#172029; --sunk:#111922; --line:#2a3845;
+  --fg:#e3e9ef; --muted:#9aa9b8; --faint:#6f8091;
+  --accent:#63a8d4; --accent-soft:#1a2c3a;
+  --ok:#6cc4a0; --ok-soft:#142a23;
+  --stop:#e08a7b; --stop-soft:#2e1a18;
+  --hold:#d9ad5f; --hold-soft:#2b2317;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#10161d; --panel:#172029; --sunk:#111922; --line:#2a3845;
+  --fg:#e3e9ef; --muted:#9aa9b8; --faint:#6f8091;
+  --accent:#63a8d4; --accent-soft:#1a2c3a;
+  --ok:#6cc4a0; --ok-soft:#142a23;
+  --stop:#e08a7b; --stop-soft:#2e1a18;
+  --hold:#d9ad5f; --hold-soft:#2b2317;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.5;margin:0}
+.wrap{max-width:1140px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+h1{font-size:1.6rem;font-weight:600;margin:0 0 .3rem;letter-spacing:-.015em;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 .4rem;max-width:62ch}
+.disclaim{font-family:var(--mono);font-size:.7rem;color:var(--faint);letter-spacing:.02em;
+  text-transform:uppercase;margin:0 0 22px}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.card+.card{margin-top:14px}
+.ttl{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--faint);margin:0 0 10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+.row+.row{border-top:1px solid var(--line)}
+.row label{font-size:.86rem;cursor:pointer;min-width:0}
+.row .sub{display:block;font-size:.72rem;color:var(--faint);font-family:var(--mono)}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;flex:none;cursor:pointer}
+input[type=range]{accent-color:var(--accent);width:100%}
+select{font-family:var(--sans);font-size:.8rem;padding:4px 6px;border:1px solid var(--line);
+  border-radius:4px;background:var(--sunk);color:var(--fg);width:100%}
+.slide{padding:8px 0}
+.slide+.slide{border-top:1px solid var(--line)}
+.slide .hd{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px}
+.slide .hd b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums;color:var(--accent)}
+/* ladder */
+.rung{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:9px 10px;border:1px solid transparent;border-radius:5px;background:var(--sunk);margin-bottom:5px}
+.rung.on{background:var(--accent-soft);border-color:var(--accent)}
+.rung.off{opacity:.5}
+.rung code{font-family:var(--mono);font-size:.82rem;font-weight:500}
+.rung .what{font-size:.82rem;min-width:0}
+.rung .need{font-family:var(--mono);font-size:.68rem;color:var(--faint);text-align:right}
+.badge{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;
+  padding:3px 7px;border-radius:3px;white-space:nowrap}
+.b-ok{background:var(--ok-soft);color:var(--ok)}
+.b-stop{background:var(--stop-soft);color:var(--stop)}
+.b-hold{background:var(--hold-soft);color:var(--hold)}
+.b-now{background:var(--accent-soft);color:var(--accent)}
+/* claims */
+.claim{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;
+  padding:11px 0;border-top:1px solid var(--line)}
+.claim:first-of-type{border-top:0}
+.claim .nm{font-family:var(--mono);font-size:.8rem;font-weight:500}
+.claim .ds{font-size:.78rem;color:var(--muted)}
+.claim .rs{font-family:var(--mono);font-size:.71rem;color:var(--faint);margin-top:3px;word-break:break-word}
+pre.trace{font-family:var(--mono);font-size:.73rem;line-height:1.65;background:var(--sunk);
+  border:1px solid var(--line);border-radius:5px;padding:12px;overflow-x:auto;margin:0;
+  white-space:pre;color:var(--fg)}
+.walkbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font-family:var(--sans);font-size:.8rem;font-weight:500;padding:6px 13px;border-radius:4px;
+  border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:.78rem;color:var(--muted);margin:10px 0 0}
+.evt{font-family:var(--mono);font-size:.73rem;color:var(--accent);min-height:1.4em}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* --- view switch + record view --- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);
+  border-radius:0;padding:8px 14px;font-size:.88rem;font-weight:500}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.recgrid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
+@media(max-width:860px){.recgrid{grid-template-columns:1fr}}
+.chartbox{overflow-x:auto}
+svg.chart{display:block;width:100%;min-width:560px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:.75rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.82rem}
+.kv+.kv{border-top:1px solid var(--line)}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.scrub{width:100%;margin-top:6px}
+.comp{padding:9px 0;font-size:.8rem}
+.comp+.comp{border-top:1px solid var(--line)}
+.comp .cn{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.04em}
+.comp .cv{color:var(--muted);font-size:.78rem}
+.strike{text-decoration:line-through;opacity:.55}
+
+/* --- view switch + record view --- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);
+  border-radius:0;padding:8px 14px;font-size:.88rem;font-weight:500}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.recgrid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
+@media(max-width:860px){.recgrid{grid-template-columns:1fr}}
+.chartbox{overflow-x:auto}
+svg.chart{display:block;width:100%;min-width:560px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:.75rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.82rem}
+.kv+.kv{border-top:1px solid var(--line)}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.scrub{width:100%;margin-top:6px}
+.comp{padding:9px 0;font-size:.8rem}
+.comp+.comp{border-top:1px solid var(--line)}
+.comp .cn{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.04em}
+.comp .cv{color:var(--muted);font-size:.78rem}
+.strike{text-decoration:line-through;opacity:.55}
+/* --- guided tour --- */
+.tour{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:16px}
+.tourtop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tourtop .ttl{margin:0}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block;cursor:pointer}
+.dots i.on{background:var(--accent);transform:scale(1.35)}
+.dots i.done{background:var(--faint)}
+.say{margin:10px 0 0;font-size:.95rem;line-height:1.55;max-width:66ch;min-height:3.1em}
+.say b{color:var(--accent);font-weight:600}
+.chapter{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--faint)}
+.bar{height:2px;background:var(--line);border-radius:2px;margin-top:11px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);width:0}
+.lit{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)!important}
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:box-shadow .3s,border-color .3s}
+  .say{transition:opacity .25s}
+  .bar span{transition:width .25s linear}
+}
+.say.fade{opacity:.25}
+
+
+/* --- view switch + record view --- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);
+  border-radius:0;padding:8px 14px;font-size:.88rem;font-weight:500}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.recgrid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
+@media(max-width:860px){.recgrid{grid-template-columns:1fr}}
+.chartbox{overflow-x:auto}
+svg.chart{display:block;width:100%;min-width:560px;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:.75rem;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.82rem}
+.kv+.kv{border-top:1px solid var(--line)}
+.kv b{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.scrub{width:100%;margin-top:6px}
+.comp{padding:9px 0;font-size:.8rem}
+.comp+.comp{border-top:1px solid var(--line)}
+.comp .cn{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.04em}
+.comp .cv{color:var(--muted);font-size:.78rem}
+.strike{text-decoration:line-through;opacity:.55}
+/* --- guided tour --- */
+.tour{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:16px}
+.tourtop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tourtop .ttl{margin:0}
+.dots{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line);display:block;cursor:pointer}
+.dots i.on{background:var(--accent);transform:scale(1.35)}
+.dots i.done{background:var(--faint)}
+.say{margin:10px 0 0;font-size:.95rem;line-height:1.55;max-width:66ch;min-height:3.1em}
+.say b{color:var(--accent);font-weight:600}
+.chapter{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--faint)}
+.bar{height:2px;background:var(--line);border-radius:2px;margin-top:11px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent);width:0}
+.lit{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)!important}
+@media (prefers-reduced-motion:no-preference){
+  .card{transition:box-shadow .3s,border-color .3s}
+  .say{transition:opacity .25s}
+  .bar span{transition:width .25s linear}
+}
+.say.fade{opacity:.25}
+
+</style>
+
+<div class="wrap">
+  <h1>Claim Ceiling Console</h1>
+  <p class="lede">One household's record over ninety days, and the rule that decides what it is
+    allowed to say about her. The chart is the engine's own output, exported by
+    <code>scripts/export_trace.py</code>.</p>
+  <p class="disclaim">Reference architecture &middot; synthetic only &middot; not a medical device</p>
+
+  <div class="tabs" role="tablist">
+    <button data-v="record" aria-selected="true">The record</button>
+    <button data-v="ceiling" aria-selected="false">The ceiling</button>
+  </div>
+
+  <div id="view-record">
+  <div class="tour">
+    <div class="tourtop">
+      <button id="t_play">Start the walkthrough</button>
+      <button id="t_prev" class="ghost">Back</button>
+      <button id="t_next" class="ghost">Next</button>
+      <span class="chapter" id="t_chapter">9 chapters &middot; about two minutes</span>
+      <span class="dots" id="t_dots"></span>
+    </div>
+    <p class="say" id="t_say">Ninety days of one household, and the rule that decides what the
+      system may say about her. Start the walkthrough, or drag the day slider yourself.</p>
+    <div class="bar"><span id="t_bar"></span></div>
+  </div>
+
+  <div class="recgrid">
+    <div>
+      <div class="card" id="card-chart">
+        <p class="ttl">Gait speed against her own baseline <span class="badge b-now" id="r_tier">T1</span></p>
+        <div class="chartbox"><svg class="chart" id="chart" viewBox="0 0 760 300" role="img"
+          aria-label="Gait speed over ninety days against the household's own rolling baseline, with the fidelity tier shown underneath."></svg></div>
+        <div class="legend">
+          <span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>her own baseline, mean &plusmn; 2 SD</span>
+          <span><i style="background:var(--accent)"></i>observed gait speed</span>
+          <span><i style="background:var(--ok)"></i>deviation emitted</span>
+          <span><i style="background:var(--stop)"></i>claim refused by the ceiling</span>
+        </div>
+        <p class="note">There is no population line on this chart, and that absence is the point.
+          The comparison is to this household's previous weeks. Replace it with a cohort percentile
+          and the twin becomes population risk scoring.</p>
+      </div>
+
+      <div class="card" id="card-traj">
+        <p class="ttl">Forward projection &mdash; 12 months, gait speed</p>
+        <div class="chartbox"><svg class="chart" id="traj" viewBox="0 0 760 170" role="img"
+          aria-label="Twelve-month projection of gait speed with a widening interval, point estimate suppressed."></svg></div>
+        <p class="note" id="trajNote"></p>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <p class="ttl">Day <span class="badge b-now" id="r_day">89</span></p>
+        <input type="range" id="scrub" class="scrub" min="0" max="89" value="89">
+        <p class="evt" id="r_evt" style="margin:6px 0 0"></p>
+      </div>
+      <div class="card" id="card-comp">
+        <p class="ttl">What the record holds</p>
+        <div class="comp"><div class="cn">CURRENT STATE</div><div class="cv" id="c_now"></div></div>
+        <div class="comp"><div class="cn">PERSONAL BASELINE</div><div class="cv" id="c_base"></div></div>
+        <div class="comp"><div class="cn">TRAJECTORY</div><div class="cv" id="c_traj"></div></div>
+        <div class="comp"><div class="cn">PROVENANCE</div><div class="cv" id="c_prov"></div></div>
+        <div class="comp"><div class="cn">CONSENT</div><div class="cv">location, wearable, neural, cue &mdash; all granted; every one defaults to false</div></div>
+      </div>
+      <div class="card" id="card-claims">
+        <p class="ttl">Claims on this day</p>
+        <div id="c_claims"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div id="view-ceiling" hidden>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <p class="ttl">Signals arriving now</p>
+        <div class="row"><label for="s_report">Caregiver report<span class="sub">caregiver_report</span></label><input type="checkbox" id="s_report" checked></div>
+        <div class="row"><label for="s_phone">Phone ambient sensing<span class="sub">phone_ambient</span></label><input type="checkbox" id="s_phone" checked></div>
+        <div class="row"><label for="s_band">Wristband<span class="sub">wristband</span></label><input type="checkbox" id="s_band" checked></div>
+        <div class="row"><label for="s_eeg">EEG headband<span class="sub">eeg</span></label><input type="checkbox" id="s_eeg"></div>
+      </div>
+
+      <div class="card">
+        <p class="ttl">Consent — gates the read</p>
+        <div class="row"><label for="c_loc">Location &amp; ambient<span class="sub">location_data</span></label><input type="checkbox" id="c_loc" checked></div>
+        <div class="row"><label for="c_wear">Wearable physiology<span class="sub">wearable_physiology</span></label><input type="checkbox" id="c_wear" checked></div>
+        <div class="row"><label for="c_neuro">Neural data<span class="sub">neural_data</span></label><input type="checkbox" id="c_neuro" checked></div>
+        <div class="row"><label for="c_cue">Cue delivery<span class="sub">cue_delivery</span></label><input type="checkbox" id="c_cue" checked></div>
+      </div>
+
+      <div class="card">
+        <p class="ttl">State of the record</p>
+        <div class="slide">
+          <div class="hd"><span>Observations in baseline</span><b id="v_obs">20</b></div>
+          <input type="range" id="r_obs" min="0" max="30" value="20">
+        </div>
+        <div class="slide">
+          <div class="hd"><span>Days since data arrived</span><b id="v_gap">0</b></div>
+          <input type="range" id="r_gap" min="0" max="7" value="0">
+        </div>
+        <div class="slide">
+          <div class="hd"><span>Eligible memory content</span><b id="v_cnt">3</b></div>
+          <input type="range" id="r_cnt" min="0" max="8" value="3">
+        </div>
+        <div class="row"><label for="s_dev">Gait has departed from baseline<span class="sub">detector would fire</span></label><input type="checkbox" id="s_dev" checked></div>
+        <div class="slide">
+          <div class="hd"><span>Attribution basis</span></div>
+          <select id="s_attr">
+            <option value="0">A0 — no biomarker information</option>
+            <option value="1">A1 — clinical diagnosis only</option>
+            <option value="2">A2 — biomarker confirmed</option>
+            <option value="3">A3 — biomarker excluded</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <p class="ttl">Derived tier <span id="tierBadge" class="badge b-now">T2</span></p>
+        <div id="ladder"></div>
+        <p class="note" id="tierWhy"></p>
+      </div>
+
+      <div class="card">
+        <p class="ttl">Claim register</p>
+        <div id="claims"></div>
+      </div>
+
+      <div class="card">
+        <p class="ttl">Ninety days, one household</p>
+        <div class="walkbar">
+          <button id="play">Play the lifecycle</button>
+          <button id="reset" class="ghost">Reset controls</button>
+          <span class="evt" id="evt"></span>
+        </div>
+        <p class="note">The walk replays the scenario in <code>tests/test_engine.py</code>: the phone
+          arrives on day 10, the wristband on day 30, the headband on day 40, both are returned on
+          day 55, and the phone is lost on day 80 while gait is still declining. That last step is
+          the one worth watching.</p>
+      </div>
+
+      <div class="card">
+        <p class="ttl">Evaluation trace</p>
+        <pre class="trace" id="trace"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+
+// Mirrors src/dte/tiers.py and src/dte/engine.py. Same ordering, same reason codes.
+const TIERS = [
+  {n:0, code:"T0", name:"Caregiver and clinician report only", needs:["caregiver_report"]},
+  {n:1, code:"T1", name:"Ambient smartphone sensing",          needs:["caregiver_report","phone_ambient"]},
+  {n:2, code:"T2", name:"Wristband physiology",                needs:["caregiver_report","phone_ambient","wristband"]},
+  {n:3, code:"T3", name:"Neural sensing",                      needs:["caregiver_report","phone_ambient","wristband","eeg"]}
+];
+const CONSENT_FOR = {phone_ambient:"location_data", wristband:"wearable_physiology", eeg:"neural_data"};
+const CLAIMS = [
+  {k:"CARE_PLAN",            min:0, label:"care-plan support and burden tracking"},
+  {k:"DEVIATION",            min:1, label:"deviation from this person's own baseline"},
+  {k:"DEVIATION_ATTRIBUTION",min:1, label:"whether a deviation is neurodegenerative or reversible", attr:true},
+  {k:"CONVERSION_RISK",      min:2, label:"MCI-to-dementia conversion risk"},
+  {k:"CUE_OPPORTUNITY",      min:3, label:"real-time memory-cue opportunity"}
+];
+const $ = id => document.getElementById(id);
+const STALE_DAYS = 3; // 72 hours
+
+function readUI(){
+  return {
+    arrived: {caregiver_report:$("s_report").checked, phone_ambient:$("s_phone").checked,
+              wristband:$("s_band").checked, eeg:$("s_eeg").checked},
+    consent: {location_data:$("c_loc").checked, wearable_physiology:$("c_wear").checked,
+              neural_data:$("c_neuro").checked, cue_delivery:$("c_cue").checked},
+    obs:+$("r_obs").value, gap:+$("r_gap").value, content:+$("r_cnt").value,
+    attr:+$("s_attr").value, deviated:$("s_dev").checked
+  };
+}
+
+function derive(s){
+  const readable = new Set(), blocked = [];
+  for(const fam of Object.keys(s.arrived)){
+    if(!s.arrived[fam]) continue;
+    const need = CONSENT_FOR[fam];
+    if(!need || s.consent[need]) readable.add(fam); else blocked.push(fam);
+  }
+  const viable = readable.has("caregiver_report");
+  let tier = 0;
+  if(viable){
+    for(const t of TIERS.slice(1)){
+      if(t.needs.every(n => readable.has(n))) tier = t.n; else break;
+    }
+  }
+  const nxt = tier < 3 ? TIERS[tier+1].needs.filter(n => !readable.has(n)) : [];
+  return {readable, blocked, viable, tier, missing:nxt,
+          stale:s.gap > STALE_DAYS, established:s.obs >= 14,
+          supportsAttr:(s.attr === 2 || s.attr === 3)};
+}
+
+// The single gate. Everything else only decides whether there is anything to say.
+function permits(d, c){
+  if(!d.viable) return false;
+  if(d.tier < c.min) return false;
+  if(c.attr && !d.supportsAttr) return false;
+  return true;
+}
+
+function evaluate(s, d){
+  return CLAIMS.map(c => {
+    if(!permits(d, c)){
+      let why = !d.viable
+        ? "no reporting signal; this record cannot support any claim"
+        : (c.attr && d.tier >= c.min && !d.supportsAttr)
+          ? "requires a biomarker basis; attribution is A" + s.attr
+          : "requires " + TIERS[c.min].code + ", operating at " + TIERS[d.tier].code;
+      return {c, state:"SILENT", reason:"CLAIM_CEILING", why};
+    }
+    if(c.k === "CARE_PLAN"){
+      if(d.stale) return {c, state:"SILENT", reason:"STATE_STALE", why:"no data within the freshness window"};
+      return {c, state:"EMIT", why:d.established ? "baseline established" : "baseline not yet established (" + s.obs + " observations)"};
+    }
+    if(c.k === "DEVIATION" || c.k === "DEVIATION_ATTRIBUTION"){
+      if(d.stale) return {c, state:"SILENT", reason:"STATE_STALE", why:"no data within the freshness window"};
+      if(!d.established) return {c, state:"SILENT", reason:"BASELINE_NOT_ESTABLISHED",
+        why:s.obs + " observations; 14 required before any alert may fire"};
+      if(!s.deviated) return {c, state:"SILENT", reason:"NO_DEVIATION", why:"within this person's own range"};
+      return {c, state:"EMIT", why:"gait_speed sustained below this person's own range"};
+    }
+    if(c.k === "CONVERSION_RISK"){
+      return {c, state:"SILENT", reason:"MODEL_NOT_AVAILABLE", why:"no fitted risk model supplied to this engine"};
+    }
+    if(c.k === "CUE_OPPORTUNITY"){
+      if(!s.consent.cue_delivery) return {c, state:"SILENT", reason:"CONSENT_WITHHELD", why:"cue delivery not consented"};
+      if(s.content === 0) return {c, state:"SILENT", reason:"NO_ELIGIBLE_CONTENT", why:"content library empty"};
+      return {c, state:"EMIT", why:"opportunity detected; " + s.content + " eligible items"};
+    }
+  });
+}
+
+function render(){
+  const s = readUI(), d = derive(s), results = evaluate(s, d);
+  $("v_obs").textContent = s.obs; $("v_gap").textContent = s.gap; $("v_cnt").textContent = s.content;
+
+  const tb = $("tierBadge");
+  tb.textContent = d.viable ? TIERS[d.tier].code : "none";
+  tb.className = "badge " + (d.viable ? "b-now" : "b-stop");
+
+  $("ladder").innerHTML = TIERS.map(t => {
+    const active = d.viable && d.tier === t.n;
+    const reached = d.viable && d.tier >= t.n;
+    const miss = t.needs.filter(n => !d.readable.has(n));
+    return '<div class="rung ' + (active ? "on" : reached ? "" : "off") + '">' +
+      '<code>' + t.code + '</code>' +
+      '<span class="what">' + t.name + '</span>' +
+      '<span class="need">' + (reached ? (active ? "operating here" : "reached")
+        : "needs " + miss.join(", ")) + '</span></div>';
+  }).join("");
+
+  let why = d.viable
+    ? "Operating at " + TIERS[d.tier].code + " — " + TIERS[d.tier].name + "."
+    : "No reporting signal. Even care-plan support requires a caregiver report.";
+  if(d.missing.length) why += " To reach " + TIERS[d.tier+1].code + ": " + d.missing.join(", ") + ".";
+  if(d.blocked.length) why += " Arrived but not read, because consent is withheld: " + d.blocked.join(", ") +
+    " — an unread signal cannot support a tier.";
+  if(d.stale) why += " The record is stale.";
+  $("tierWhy").textContent = why;
+
+  $("claims").innerHTML = results.map(r =>
+    '<div class="claim"><div><div class="nm">' + r.c.k + '</div>' +
+    '<div class="ds">' + r.c.label + '</div>' +
+    '<div class="rs">' + (r.state === "EMIT" ? r.why : r.reason + " — " + r.why) + '</div></div>' +
+    '<span class="badge ' + (r.state === "EMIT" ? "b-ok" : r.reason === "CLAIM_CEILING" ? "b-stop" : "b-hold") +
+    '">' + (r.state === "EMIT" ? "emit" : "silent") + '</span></div>').join("");
+
+  const lines = [];
+  lines.push((d.viable ? "tier=" + TIERS[d.tier].code : "tier=none") +
+    "  attribution=A" + s.attr + "  baseline=" + s.obs + "  gap=" + s.gap + "d" + (d.stale ? " STALE" : ""));
+  lines.push("readable=[" + [...d.readable].join(" ") + "]" + (d.blocked.length ? "  blocked=[" + d.blocked.join(" ") + "]" : ""));
+  lines.push("");
+  for(const r of results){
+    lines.push((r.state === "EMIT" ? "EMIT    " : "SILENT  ") + r.c.k.padEnd(23) +
+      (r.state === "EMIT" ? r.why : r.reason));
+  }
+  $("trace").textContent = lines.join("\n");
+}
+
+// --- the 90-day walk, matching tests/test_engine.py
+const WALK = [
+  {d:0,  ev:"enrolment — caregiver report only",        phone:false,band:false,eeg:false,obs:1},
+  {d:10, ev:"day 10 · phone sensing begins",            phone:true, band:false,eeg:false,obs:1},
+  {d:14, ev:"day 14 · baseline establishes",            phone:true, band:false,eeg:false,obs:14},
+  {d:30, ev:"day 30 · wristband issued",                phone:true, band:true, eeg:false,obs:30},
+  {d:40, ev:"day 40 · EEG headband trial begins",       phone:true, band:true, eeg:true, obs:30},
+  {d:55, ev:"day 55 · headband and wristband returned", phone:true, band:false,eeg:false,obs:30},
+  {d:70, ev:"day 70 · household goes dark for 4 days",  phone:true, band:false,eeg:false,obs:30,gap:4},
+  {d:74, ev:"day 74 · contact re-established",          phone:true, band:false,eeg:false,obs:30},
+  {d:80, ev:"day 80 · phone lost — gait still declining",phone:false,band:false,eeg:false,obs:30}
+];
+let timer = null;
+function stop(){ if(timer){ clearInterval(timer); timer = null; $("play").textContent = "Play the lifecycle"; } }
+function applyStep(st){
+  $("s_report").checked = true;
+  $("s_dev").checked = st.d >= 60;
+  $("s_phone").checked = st.phone; $("s_band").checked = st.band; $("s_eeg").checked = st.eeg;
+  $("r_obs").value = st.obs; $("r_gap").value = st.gap || 0;
+  $("evt").textContent = st.ev;
+  render();
+}
+$("play").addEventListener("click", () => {
+  if(timer){ stop(); return; }
+  let i = 0;
+  $("play").textContent = "Stop";
+  applyStep(WALK[i++]);
+  timer = setInterval(() => {
+    if(i >= WALK.length){ stop(); return; }
+    applyStep(WALK[i++]);
+  }, 1900);
+});
+$("reset").addEventListener("click", () => {
+  stop();
+  ["s_report","s_phone","s_band","c_loc","c_wear","c_neuro","c_cue","s_dev"].forEach(id => $(id).checked = true);
+  $("s_eeg").checked = false;
+  $("r_obs").value = 20; $("r_gap").value = 0; $("r_cnt").value = 3; $("s_attr").value = "0";
+  $("evt").textContent = "";
+  render();
+});
+document.querySelectorAll("input,select").forEach(el =>
+  el.addEventListener("input", () => { stop(); $("evt").textContent = ""; render(); }));
+render();
+
+</script>
+<script>
+
+const TRACE = {"trajectory":{"metric":"gait_speed","horizon_months":12.0,"suppressed":true,"confidence":0.0,"projected":[0.5701,0.3661,0.1621,-0.0418,-0.2458,-0.4497,-0.6537,-0.8576,-1.0616,-1.2655,-1.4695,-1.6734],"ci_lower":[0.2827,0.056,-0.1767,-0.4139,-0.6547,-0.898,-1.1434,-1.3903,-1.6383,-1.8873,-2.1371,-2.3874],"ci_upper":[0.8574,0.6762,0.501,0.3303,0.1631,-0.0014,-0.164,-0.325,-0.4848,-0.6437,-0.8019,-0.9595]},"frames":[{"d":0,"t":0,"g":null,"m":null,"s":null,"n":0,"p":1,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":1,"t":0,"g":null,"m":null,"s":null,"n":0,"p":2,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":2,"t":0,"g":null,"m":null,"s":null,"n":0,"p":3,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":3,"t":0,"g":null,"m":null,"s":null,"n":0,"p":4,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":4,"t":0,"g":null,"m":null,"s":null,"n":0,"p":5,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":5,"t":0,"g":null,"m":null,"s":null,"n":0,"p":6,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":6,"t":0,"g":null,"m":null,"s":null,"n":0,"p":7,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":7,"t":0,"g":null,"m":null,"s":null,"n":0,"p":8,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":8,"t":0,"g":null,"m":null,"s":null,"n":0,"p":9,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":9,"t":0,"g":null,"m":null,"s":null,"n":0,"p":10,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":10,"t":1,"g":1.1106,"m":1.1106,"s":0.0,"n":1,"p":11,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"},"ev":"phone sensing begins"},{"d":11,"t":1,"g":1.1093,"m":1.1099,"s":0.0009,"n":2,"p":12,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":12,"t":1,"g":1.1008,"m":1.1069,"s":0.0053,"n":3,"p":13,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":13,"t":1,"g":1.1135,"m":1.1085,"s":0.0055,"n":4,"p":14,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":14,"t":1,"g":1.1056,"m":1.108,"s":0.0049,"n":5,"p":15,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"},"ev":"baseline establishes"},{"d":15,"t":1,"g":1.0897,"m":1.1049,"s":0.0087,"n":6,"p":16,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":16,"t":1,"g":1.1044,"m":1.1048,"s":0.0079,"n":7,"p":17,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":17,"t":1,"g":1.0885,"m":1.1028,"s":0.0093,"n":8,"p":18,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":18,"t":1,"g":1.1105,"m":1.1037,"s":0.0091,"n":9,"p":19,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":19,"t":1,"g":1.0994,"m":1.1032,"s":0.0087,"n":10,"p":20,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":20,"t":1,"g":1.0978,"m":1.1027,"s":0.0084,"n":11,"p":21,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":21,"t":1,"g":1.0918,"m":1.1018,"s":0.0086,"n":12,"p":22,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":22,"t":1,"g":1.1147,"m":1.1028,"s":0.009,"n":13,"p":23,"e":["CARE"],"x":{"DEVI":"BASELINE_NOT_ESTABLISHED","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":23,"t":1,"g":1.0981,"m":1.1025,"s":0.0087,"n":14,"p":24,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":24,"t":1,"g":1.0949,"m":1.102,"s":0.0086,"n":15,"p":25,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":25,"t":1,"g":1.0958,"m":1.1016,"s":0.0085,"n":16,"p":26,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":26,"t":1,"g":1.1064,"m":1.1019,"s":0.0083,"n":17,"p":27,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":27,"t":1,"g":1.1044,"m":1.102,"s":0.0081,"n":18,"p":28,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":28,"t":1,"g":1.105,"m":1.1022,"s":0.0079,"n":19,"p":29,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":29,"t":1,"g":1.1052,"m":1.1023,"s":0.0077,"n":20,"p":30,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":30,"t":2,"g":1.1257,"m":1.1034,"s":0.0091,"n":21,"p":31,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"},"ev":"wristband issued"},{"d":31,"t":2,"g":1.0951,"m":1.1031,"s":0.009,"n":22,"p":32,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":32,"t":2,"g":1.0939,"m":1.1027,"s":0.009,"n":23,"p":33,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":33,"t":2,"g":1.0902,"m":1.1021,"s":0.0092,"n":24,"p":34,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":34,"t":2,"g":1.1074,"m":1.1023,"s":0.009,"n":25,"p":35,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":35,"t":2,"g":1.1135,"m":1.1028,"s":0.0091,"n":26,"p":36,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":36,"t":2,"g":1.0986,"m":1.1026,"s":0.009,"n":27,"p":37,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":37,"t":2,"g":1.0899,"m":1.1022,"s":0.0091,"n":28,"p":38,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":38,"t":2,"g":1.0901,"m":1.1018,"s":0.0093,"n":29,"p":39,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":39,"t":2,"g":1.1078,"m":1.102,"s":0.0092,"n":30,"p":40,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"CLAIM_CEILING"}},{"d":40,"t":3,"g":1.1089,"m":1.1022,"s":0.0091,"n":31,"p":41,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"},"ev":"EEG headband trial begins"},{"d":41,"t":3,"g":1.1065,"m":1.1023,"s":0.009,"n":32,"p":42,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":42,"t":3,"g":1.092,"m":1.102,"s":0.009,"n":33,"p":43,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":43,"t":3,"g":1.1028,"m":1.102,"s":0.0089,"n":34,"p":44,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":44,"t":3,"g":1.1014,"m":1.102,"s":0.0087,"n":35,"p":45,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":45,"t":3,"g":1.1026,"m":1.102,"s":0.0086,"n":36,"p":46,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":46,"t":3,"g":1.1105,"m":1.1023,"s":0.0086,"n":37,"p":47,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":47,"t":3,"g":1.1027,"m":1.1023,"s":0.0085,"n":38,"p":48,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":48,"t":3,"g":1.1081,"m":1.1024,"s":0.0084,"n":39,"p":49,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":49,"t":3,"g":1.1008,"m":1.1024,"s":0.0083,"n":40,"p":50,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":50,"t":3,"g":1.1035,"m":1.1024,"s":0.0082,"n":41,"p":51,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":51,"t":3,"g":1.1076,"m":1.1025,"s":0.0082,"n":42,"p":52,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":52,"t":3,"g":1.0825,"m":1.1021,"s":0.0086,"n":43,"p":53,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":53,"t":3,"g":1.0962,"m":1.1019,"s":0.0086,"n":44,"p":54,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":54,"t":3,"g":1.0944,"m":1.1018,"s":0.0085,"n":45,"p":55,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"MODEL_NOT_AVAILABLE","CUE_":"DETECTOR_DECLINED"}},{"d":55,"t":1,"g":1.0923,"m":1.1016,"s":0.0086,"n":46,"p":56,"dg":1,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"},"ev":"headband and wristband returned"},{"d":56,"t":1,"g":1.0967,"m":1.1014,"s":0.0085,"n":47,"p":57,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":57,"t":1,"g":1.1179,"m":1.1018,"s":0.0087,"n":48,"p":58,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":58,"t":1,"g":1.0896,"m":1.1015,"s":0.0088,"n":49,"p":59,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":59,"t":1,"g":1.1116,"m":1.1017,"s":0.0088,"n":50,"p":60,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":60,"t":1,"g":1.0448,"m":1.1006,"s":0.0118,"n":51,"p":61,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":61,"t":1,"g":1.026,"m":1.0992,"s":0.0156,"n":52,"p":62,"e":["CARE"],"x":{"DEVI":"NO_DEVIATION","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":62,"t":1,"g":0.997,"m":1.0973,"s":0.0209,"n":53,"p":63,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":63,"t":1,"g":0.967,"m":1.0949,"s":0.0273,"n":54,"p":64,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":64,"t":1,"g":0.9335,"m":1.0919,"s":0.0347,"n":55,"p":65,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":65,"t":1,"g":0.8995,"m":1.0885,"s":0.0429,"n":56,"p":66,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":66,"t":1,"g":0.8508,"m":1.0843,"s":0.0529,"n":57,"p":67,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":67,"t":1,"g":0.8145,"m":1.0797,"s":0.0633,"n":58,"p":68,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":68,"t":1,"g":0.7953,"m":1.0748,"s":0.0729,"n":59,"p":69,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":69,"t":1,"g":0.7477,"m":1.0694,"s":0.0837,"n":60,"p":70,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":70,"dark":1,"ev":"household goes dark"},{"d":71,"dark":1},{"d":72,"dark":1},{"d":73,"dark":1},{"d":74,"t":1,"g":0.5597,"m":1.061,"s":0.1056,"n":61,"p":71,"st":1,"e":[],"x":{"DEVI":"STATE_STALE","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"},"ev":"contact re-established"},{"d":75,"t":1,"g":0.5264,"m":1.0524,"s":0.1248,"n":62,"p":72,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":76,"t":1,"g":0.494,"m":1.0435,"s":0.1424,"n":63,"p":73,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":77,"t":1,"g":0.476,"m":1.0347,"s":0.1581,"n":64,"p":74,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":78,"t":1,"g":0.4367,"m":1.0255,"s":0.1735,"n":65,"p":75,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":79,"t":1,"g":0.4083,"m":1.0161,"s":0.1881,"n":66,"p":76,"e":["CARE","DEVI"],"x":{"CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":80,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":77,"dg":1,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"},"ev":"phone lost; gait still declining"},{"d":81,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":78,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":82,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":79,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":83,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":80,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":84,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":81,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":85,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":82,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":86,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":83,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":87,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":84,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":88,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":85,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}},{"d":89,"t":0,"g":null,"m":1.0161,"s":0.1881,"n":66,"p":86,"e":["CARE"],"x":{"DEVI":"CLAIM_CEILING","CONV":"CLAIM_CEILING","CUE_":"CLAIM_CEILING"}}]};
+const NAMES = {CARE:"CARE_PLAN", DEVI:"DEVIATION", CONV:"CONVERSION_RISK", CUE_:"CUE_OPPORTUNITY"};
+const TIER_LABEL = ["T0","T1","T2","T3"];
+const g = id => document.getElementById(id);
+const F = TRACE.frames;
+
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+const X0 = 46, X1 = 742, Y0 = 16, Y1 = 232, STRIP = 250, STRIPH = 16;
+const LO = 0.30, HI = 1.22;
+const px = d => X0 + (d / 89) * (X1 - X0);
+const py = v => Y1 - ((v - LO) / (HI - LO)) * (Y1 - Y0);
+
+function drawChart(sel){
+  const acc = css("--accent"), accS = css("--accent-soft"), line = css("--line"),
+        faint = css("--faint"), ok = css("--ok"), stop = css("--stop"), hold = css("--hold");
+  let s = "";
+
+  for(const v of [0.4, 0.6, 0.8, 1.0, 1.2]){
+    s += `<line x1="${X0}" y1="${py(v).toFixed(1)}" x2="${X1}" y2="${py(v).toFixed(1)}" stroke="${line}" stroke-width="1"/>`;
+    s += `<text x="${X0 - 7}" y="${(py(v) + 3.5).toFixed(1)}" fill="${faint}" font-size="10" text-anchor="end" font-family="var(--mono)">${v.toFixed(1)}</text>`;
+  }
+
+  const up = [], dn = [];
+  for(const f of F){
+    if(f.dark || f.m == null || f.g == null) continue;  // the band stops where sensing stops
+    up.push([px(f.d), py(Math.min(HI, f.m + 2 * f.s))]);
+    dn.push([px(f.d), py(Math.max(LO, f.m - 2 * f.s))]);
+  }
+  if(up.length){
+    const pts = up.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1))
+      .concat(dn.reverse().map(p => p[0].toFixed(1) + "," + p[1].toFixed(1))).join(" ");
+    s += `<polygon points="${pts}" fill="${accS}" stroke="${acc}" stroke-width="1" stroke-opacity=".45"/>`;
+  }
+
+  let run = [];
+  const flush = () => {
+    if(run.length > 1) s += `<polyline points="${run.join(" ")}" fill="none" stroke="${acc}" stroke-width="2"/>`;
+    run = [];
+  };
+  for(const f of F){
+    if(f.dark || f.g == null){ flush(); continue; }
+    run.push(px(f.d).toFixed(1) + "," + py(f.g).toFixed(1));
+  }
+  flush();
+
+  for(const f of F){
+    if(f.dark || f.g == null) continue;
+    if((f.e || []).includes("DEVI"))
+      s += `<circle cx="${px(f.d).toFixed(1)}" cy="${py(f.g).toFixed(1)}" r="2.6" fill="${ok}"/>`;
+  }
+
+  for(const f of F){
+    const x = px(f.d), w = (X1 - X0) / 89 + 0.6;
+    let fill = line;
+    if(f.dark) fill = faint;
+    else if((f.x || {}).DEVI === "CLAIM_CEILING") fill = stop;
+    else if(f.st) fill = hold;
+    else fill = acc;
+    const op = f.dark ? ".3" : (f.t != null ? (0.3 + 0.23 * f.t).toFixed(2) : ".3");
+    s += `<rect x="${(x - w / 2).toFixed(1)}" y="${STRIP}" width="${w.toFixed(1)}" height="${STRIPH}" fill="${fill}" fill-opacity="${op}"/>`;
+    if(!f.dark && f.t != null && (f.d === 0 || F[f.d - 1].dark || F[f.d - 1].t !== f.t))
+      s += `<text x="${(x + 2).toFixed(1)}" y="${STRIP + 29}" fill="${faint}" font-size="9" font-family="var(--mono)">${TIER_LABEL[f.t]}</text>`;
+  }
+  s += `<text x="${X1}" y="${STRIP - 5}" fill="${faint}" font-size="9" text-anchor="end" font-family="var(--mono)">FIDELITY TIER</text>`;
+
+  for(const f of F){
+    if(!f.ev) continue;
+    s += `<line x1="${px(f.d).toFixed(1)}" y1="${Y0}" x2="${px(f.d).toFixed(1)}" y2="${Y1}" stroke="${faint}" stroke-width="1" stroke-dasharray="2 3" stroke-opacity=".7"/>`;
+    s += `<text x="${(px(f.d) + 3).toFixed(1)}" y="${Y0 + 9}" fill="${faint}" font-size="8.5" font-family="var(--mono)">d${f.d}</text>`;
+  }
+
+  const lastSeen = [...F].reverse().find(q => !q.dark && q.g != null);
+  if(lastSeen)
+    s += `<circle cx="${px(lastSeen.d).toFixed(1)}" cy="${py(lastSeen.g).toFixed(1)}" r="3" fill="none" stroke="${stop}" stroke-width="1.5"/>`
+       + `<text x="${(px(lastSeen.d) + 6).toFixed(1)}" y="${(py(lastSeen.g) + 3).toFixed(1)}" fill="${stop}" font-size="9" font-family="var(--mono)">last reading</text>`;
+
+  const f = F[sel];
+  s += `<line x1="${px(sel).toFixed(1)}" y1="${Y0}" x2="${px(sel).toFixed(1)}" y2="${STRIP + STRIPH}" stroke="${acc}" stroke-width="1.5"/>`;
+  if(!f.dark && f.g != null)
+    s += `<circle cx="${px(sel).toFixed(1)}" cy="${py(f.g).toFixed(1)}" r="4" fill="${acc}" stroke="${css("--panel")}" stroke-width="1.5"/>`;
+  g("chart").innerHTML = s;
+}
+
+function drawTraj(){
+  const t = TRACE.trajectory;
+  const acc = css("--accent"), accS = css("--accent-soft"), faint = css("--faint"), line = css("--line");
+  if(!t){ g("traj").innerHTML = ""; return; }
+  const n = t.projected.length;
+  const lo = Math.min(...t.ci_lower), hi = Math.max(...t.ci_upper);
+  const X = i => 46 + (i / (n - 1)) * (742 - 46);
+  const Y = v => 140 - ((v - lo) / (hi - lo || 1)) * (140 - 20);
+  let s = "";
+  const up = t.ci_upper.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1));
+  const dn = t.ci_lower.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).reverse();
+  s += `<polygon points="${up.concat(dn).join(" ")}" fill="${accS}" stroke="${acc}" stroke-width="1" stroke-opacity=".4"/>`;
+  s += `<polyline points="${t.projected.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" ")}" fill="none" stroke="${acc}" stroke-width="2" stroke-dasharray="4 4" stroke-opacity="${t.suppressed ? ".35" : "1"}"/>`;
+  for(const i of [0, n - 1]){
+    s += `<text x="${X(i).toFixed(1)}" y="158" fill="${faint}" font-size="10" text-anchor="${i ? "end" : "start"}" font-family="var(--mono)">+${i + 1}mo</text>`;
+  }
+  s += `<line x1="46" y1="140" x2="742" y2="140" stroke="${line}"/>`;
+  if(t.suppressed)
+    s += `<text x="394" y="86" fill="${faint}" font-size="12" text-anchor="middle" font-family="var(--mono)">POINT ESTIMATE SUPPRESSED</text>`;
+  g("traj").innerHTML = s;
+  g("trajNote").textContent = t.suppressed
+    ? "The interval at the horizon is wider than the measure is worth, so the twin withholds the "
+      + "number and shows only the range. A forecast that cannot be trusted is not reported as one."
+    : "Confidence " + t.confidence + ".";
+}
+
+function paint(){
+  const i = +g("scrub").value, f = F[i];
+  g("r_day").textContent = i;
+  g("r_evt").textContent = f.ev ? "day " + f.d + " \u00b7 " + f.ev : "";
+  const tb = g("r_tier");
+  tb.textContent = f.dark ? "dark" : TIER_LABEL[f.t];
+  tb.className = "badge " + (f.dark ? "b-hold" : "b-now");
+
+  if(f.dark){
+    g("c_now").textContent = "Nothing arrived. The record is not written on a day it receives nothing.";
+    g("c_base").textContent = "unchanged";
+    g("c_prov").textContent = "unchanged";
+    g("c_claims").innerHTML = '<div class="claim"><div class="ds">No evaluation ran.</div></div>';
+  } else {
+    g("c_now").textContent = (f.g == null ? "gait_speed not reported" : "gait_speed " + f.g.toFixed(3) + " m/s")
+      + " \u00b7 signals " + (f.t != null ? TIER_LABEL[f.t] : "none");
+    g("c_base").textContent = f.m == null ? "not started"
+      : "mean " + f.m.toFixed(3) + " \u00b1 " + f.s.toFixed(3) + " over " + f.n + " observations"
+        + (f.n >= 14 ? " (established)" : " (not established)");
+    g("c_prov").textContent = f.p + " records, each with source, time and consent basis";
+    const rows = [];
+    for(const k of (f.e || [])) rows.push([NAMES[k], "emit", ""]);
+    for(const [k, v] of Object.entries(f.x || {})) rows.push([NAMES[k], "silent", v]);
+    g("c_claims").innerHTML = rows.map(r =>
+      '<div class="claim"><div><div class="nm">' + r[0] + '</div>'
+      + (r[2] ? '<div class="rs">' + r[2] + '</div>' : '')
+      + '</div><span class="badge ' + (r[1] === "emit" ? "b-ok" : r[2] === "CLAIM_CEILING" ? "b-stop" : "b-hold")
+      + '">' + r[1] + '</span></div>').join("");
+  }
+  const t = TRACE.trajectory;
+  g("c_traj").innerHTML = t
+    ? (t.suppressed ? '<span class="strike">point estimate</span> suppressed; 12-month interval too wide'
+                    : "12-month projection, confidence " + t.confidence)
+    : "not yet computed";
+  drawChart(i);
+}
+
+g("scrub").addEventListener("input", paint);
+["change"].forEach(() => {});
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { paint(); drawTraj(); });
+
+// view switch
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  g("view-record").hidden = b.dataset.v !== "record";
+  g("view-ceiling").hidden = b.dataset.v !== "ceiling";
+  if(b.dataset.v === "record"){ paint(); drawTraj(); }
+}));
+
+paint();
+drawTraj();
+
+// ---------------------------------------------------------------- guided tour
+const TOUR = [
+  {to:0, lit:"card-comp", hd:"One household, one record",
+   say:"This is the twin: a record of <b>one person</b>, holding her current state, her own "
+      +"baseline, a forward projection, and the provenance of every value in it. On day zero it "
+      +"holds almost nothing, and the panel on the right says so rather than filling in a default."},
+  {to:13, lit:"card-claims", hd:"The baseline has to earn its existence",
+   say:"For the first thirteen days every deviation claim is refused with "
+      +"<b>BASELINE_NOT_ESTABLISHED</b>. Fourteen days of her own history are required before any "
+      +"alert may fire. Alerting in week one against a baseline that does not exist yet is how "
+      +"monitoring pilots generate noise and get switched off by week six."},
+  {to:14, lit:"card-chart", hd:"Sensing arrives, and the tier is derived",
+   say:"The phone arrived on day ten and the tier moved to <b>T1</b>. Tier is worked out afresh on "
+      +"every evaluation from what actually turned up &mdash; never from what she was enrolled "
+      +"with. The strip under the chart is that tier, day by day."},
+  {to:40, lit:"card-chart", hd:"Each sensor buys one more thing the twin may say",
+   say:"Wristband on day thirty takes her to <b>T2</b> and unlocks conversion risk. Headband on "
+      +"day forty takes her to <b>T3</b> and unlocks the memory cue. The band on the chart is her "
+      +"own normal, mean plus or minus two standard deviations. There is no population line here, "
+      +"and that absence is the point."},
+  {to:50, lit:"card-claims", hd:"Nothing happening is a result",
+   say:"She is at the top of the ladder and the register still reads <b>NO_DEVIATION</b> and "
+      +"<b>MODEL_NOT_AVAILABLE</b>. Silence is a return value with a reason attached, not an "
+      +"absence of output. &lsquo;Why did nothing happen?&rsquo; always has an answer."},
+  {to:56, lit:"card-chart", hd:"Sensing is withdrawn, and the claims close behind it",
+   say:"The headband and wristband go back on day fifty-five. On the very next evaluation the twin "
+      +"falls to <b>T1</b> and announces the downgrade. A patient who takes the headband off is a "
+      +"T1 patient from that moment &mdash; not a T3 patient reasoning over stale neural data."},
+  {to:74, lit:"card-comp", hd:"She goes quiet, and the record does not pretend otherwise",
+   say:"Four days with nothing arriving. The twin writes nothing on a day it receives nothing, so "
+      +"the record keeps meaning &lsquo;when data last arrived&rsquo;. On re-contact the state is "
+      +"flagged <b>STATE_STALE</b> and even care-plan support is withheld until it is fresh again."},
+  {to:79, lit:"card-chart", hd:"The decline, and the band widening around it",
+   say:"From day sixty her gait falls. The green dots are deviations the engine actually emitted. "
+      +"Watch the band widen as it absorbs the new values &mdash; her own normal is being "
+      +"rewritten by the decline, which is why a sustained departure matters more than a single "
+      +"bad day."},
+  {to:89, lit:"card-claims", hd:"The refusal this whole system exists for",
+   say:"The phone is lost on day eighty. Her gait is <b>still falling</b> and the record still "
+      +"holds the history &mdash; the twin could easily emit the alert. It refuses, with "
+      +"<b>CLAIM_CEILING</b>, because it can no longer sense what that claim would rest on. That "
+      +"is the difference between a safety policy and a safety property."}
+];
+
+let tIdx = -1, tTimer = null, tAnim = null;
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function tDots(){
+  g("t_dots").innerHTML = TOUR.map((_, i) =>
+    '<i class="' + (i === tIdx ? "on" : i < tIdx ? "done" : "") + '" data-i="' + i + '"></i>').join("");
+}
+function tLight(id){
+  ["card-chart","card-traj","card-comp","card-claims"].forEach(c => g(c)?.classList.toggle("lit", c === id));
+  if(!id) return;
+  const el = g(id);
+  if(!el) return;
+  const r = el.getBoundingClientRect();
+  const off = r.top < 60 || r.bottom > (window.innerHeight || 800) - 20;
+  if(off) el.scrollIntoView({block:"nearest", behavior: reduce ? "auto" : "smooth"});
+}
+function tGoto(i, animate){
+  if(i < 0 || i >= TOUR.length) return tStop();
+  tIdx = i;
+  const step = TOUR[i];
+  const say = g("t_say");
+  say.classList.add("fade");
+  setTimeout(() => { say.innerHTML = step.say; say.classList.remove("fade"); }, reduce ? 0 : 180);
+  g("t_chapter").textContent = "Chapter " + (i + 1) + " of " + TOUR.length + " · " + step.hd;
+  g("t_bar").style.width = (((i + 1) / TOUR.length) * 100).toFixed(1) + "%";
+  tDots();
+  tLight(step.lit);
+
+  const from = +g("scrub").value, to = step.to;
+  cancelAnimationFrame(tAnim);
+  if(!animate || reduce || from === to){ g("scrub").value = to; paint(); return; }
+  const dur = Math.min(1100, 90 + Math.abs(to - from) * 22), t0 = performance.now();
+  const tick = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    g("scrub").value = Math.round(from + (to - from) * e);
+    paint();
+    if(k < 1) tAnim = requestAnimationFrame(tick);
+  };
+  tAnim = requestAnimationFrame(tick);
+}
+function tStop(){
+  clearInterval(tTimer); tTimer = null;
+  cancelAnimationFrame(tAnim);
+  g("t_play").textContent = tIdx >= TOUR.length - 1 ? "Play again" : "Resume";
+}
+function tPlay(){
+  if(tTimer){ tStop(); return; }
+  if(tIdx >= TOUR.length - 1) tIdx = -1;
+  g("t_play").textContent = "Pause";
+  tGoto(tIdx + 1, true);
+  tTimer = setInterval(() => {
+    if(tIdx >= TOUR.length - 1){ tStop(); return; }
+    tGoto(tIdx + 1, true);
+  }, 8200);
+}
+g("t_play").addEventListener("click", tPlay);
+g("t_next").addEventListener("click", () => { tStop(); tGoto(Math.min(tIdx + 1, TOUR.length - 1), true); });
+g("t_prev").addEventListener("click", () => { tStop(); tGoto(Math.max(tIdx - 1, 0), true); });
+g("t_dots").addEventListener("click", e => {
+  const i = e.target.dataset?.i;
+  if(i !== undefined){ tStop(); tGoto(+i, true); }
+});
+g("scrub").addEventListener("input", () => { tStop(); tLight(null); });
+tDots();
+
+
+</script>
+
+</body>
+</html>
