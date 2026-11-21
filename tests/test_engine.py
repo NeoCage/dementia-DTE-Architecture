@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from dte.engine import Observation, Reason, TwinEngine
+from dte.engine import Accountable, Observation, Reason, TwinEngine
 from dte.tiers import MINIMUM_TIER_FOR_CLAIM, AttributionBasis, Claim, Tier
 from dte.twin import ConsentSnapshot, TwinState
 
@@ -335,3 +335,79 @@ def test_each_claim_is_refused_one_tier_below_its_requirement(claim: Claim, requ
     assert result.tier_state.tier is below
     assert not result.emitted(claim)
     assert result.suppression_for(claim).reason == Reason.CEILING
+
+
+# ------------------------------------------- the chain: report -> device -> twin -> action
+def _chain_engine(owner: bool = True) -> TwinEngine:
+    twin = TwinState(patient_id="household-001", consent=_consent())
+    return TwinEngine(
+        twin,
+        accountable=Accountable("Maria Alvarez", "care navigator", "ext 4412") if owner else None,
+    )
+
+
+def _decline(engine: TwinEngine, days: int = 40) -> object:
+    start = datetime.now(timezone.utc) - days * DAY
+    result = None
+    for day in range(days):
+        gait = 1.10 if day < 25 else 1.10 - 0.04 * (day - 24)
+        result = engine.ingest(_obs(start + day * DAY, phone=True, gait=gait))
+    return result
+
+
+def test_the_whole_chain_ends_in_an_instruction_a_named_person_owns() -> None:
+    """Caregiver report -> device -> twin -> something somebody has to do.
+
+    This is the acceptance test for the system as a whole. Each link is covered
+    individually elsewhere; this one asserts they connect.
+    """
+    engine = _chain_engine()
+    result = _decline(engine)
+
+    # link 1-2: the report and the device both reached the record
+    assert engine.twin.context, "the caregiver report did not reach the twin"
+    assert engine.twin.mobility, "the device features did not reach the twin"
+    assert engine.twin.provenance, "nothing was recorded as attributable"
+
+    # link 3: the twin formed a view against her own history
+    assert engine.twin.baseline.is_established
+    assert result.emitted(Claim.DEVIATION)
+
+    # link 4: that view became an instruction, owned, dated, and deliverable
+    clinical = [a for a in result.actions if a.kind == "clinical"]
+    assert clinical, "the twin emitted a deviation and nobody was asked to do anything"
+    act = clinical[0]
+    assert "Maria Alvarez" in act.owner and "care navigator" in act.owner
+    assert act.due_within_hours > 0
+    assert act.do_next.strip()
+    assert "not a diagnosis" in act.do_next, "the instruction must not overstate what it is"
+
+
+def test_no_action_is_raised_without_a_named_person() -> None:
+    """Requirement 6 enforced rather than recommended: a role is not a name."""
+    engine = _chain_engine(owner=False)
+    result = _decline(engine)
+
+    assert result.emitted(Claim.DEVIATION)
+    assert not result.actions
+    assert any(s.reason == Reason.NO_OWNER for s in result.suppressions)
+
+
+def test_losing_a_device_raises_a_sensing_action_rather_than_going_quiet() -> None:
+    engine = _chain_engine()
+    at = datetime.now(timezone.utc) - 30 * DAY
+    engine.ingest(_obs(at, phone=True, band=True, eeg=True))
+    result = engine.ingest(_obs(at + DAY, phone=True, band=True))
+
+    sensing = [a for a in result.actions if a.kind == "sensing"]
+    assert sensing, "a downgrade that suspends claims must produce work somebody owns"
+    assert "Maria Alvarez" in sensing[0].owner
+
+
+def test_actions_pass_through_the_alert_budget_and_say_when_they_are_held() -> None:
+    engine = _chain_engine()
+    result = _decline(engine)
+    for act in result.actions:
+        assert isinstance(act.delivered, bool)
+        if not act.delivered:
+            assert act.note, "a held action must say that it was held"

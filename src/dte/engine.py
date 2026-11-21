@@ -79,6 +79,63 @@ _CONSENT_FOR_SIGNAL: dict[str, str] = {
 _HISTORY = 60
 
 
+@dataclass(frozen=True)
+class Accountable:
+    """The named person who acts. Requirement 6 of Section 3.1 rejects a job title.
+
+    The engine refuses to raise an action without one, which is the only way the
+    "a role is not a name" requirement can be enforced rather than recommended.
+    """
+
+    name: str
+    role: str
+    contact: Optional[str] = None
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.role})"
+
+
+@dataclass(frozen=True)
+class Action:
+    """What a human is being asked to do, and by when.
+
+    An emission says what the twin believes. An action says what happens next and who it
+    belongs to. The gap between the two is where this class of system usually fails: the
+    model is right, the dashboard is correct, and nobody was told it was their job.
+    """
+
+    kind: str  # "clinical" | "sensing"
+    trigger: Claim
+    headline: str
+    what_changed: str
+    do_next: str
+    owner: str
+    due_within_hours: int
+    delivered: bool = True
+    note: str = ""
+
+    def explain(self) -> str:
+        head = f"{self.headline} \u2014 {self.owner}, within {self.due_within_hours}h"
+        if not self.delivered:
+            head += "  [HELD BY ALERT BUDGET]"
+        return (
+            head + f"\n      what changed: {self.what_changed}\n      do next:      {self.do_next}"
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "trigger": self.trigger.name,
+            "headline": self.headline,
+            "what_changed": self.what_changed,
+            "do_next": self.do_next,
+            "owner": self.owner,
+            "due_within_hours": self.due_within_hours,
+            "delivered": self.delivered,
+            "note": self.note,
+        }
+
+
 class Reason:
     """Reason codes for suppression. Stable strings — they end up in audit records."""
 
@@ -92,6 +149,7 @@ class Reason:
     BUDGET = "ALERT_BUDGET"
     DETECTOR = "DETECTOR_DECLINED"
     NO_CONTENT = "NO_ELIGIBLE_CONTENT"
+    NO_OWNER = "NO_NAMED_OWNER"
 
 
 @dataclass(frozen=True)
@@ -155,6 +213,7 @@ class EvaluationResult:
     downgrade: Optional[str] = None
     stale: bool = False
     provenance_index: Optional[int] = None
+    actions: list[Action] = field(default_factory=list)
 
     @property
     def silent(self) -> bool:
@@ -176,6 +235,8 @@ class EvaluationResult:
             head += f"\n  EMIT    {e.claim.name}: {e.explanation}"
         for s in self.suppressions:
             head += f"\n  SILENT  {s.claim.name}: {s.reason} {s.detail}".rstrip()
+        for a in self.actions:
+            head += f"\n  ACT     {a.explain()}"
         return head
 
     def to_dict(self) -> dict[str, Any]:
@@ -188,6 +249,7 @@ class EvaluationResult:
             "emissions": [e.to_dict() for e in self.emissions],
             "suppressions": [s.to_dict() for s in self.suppressions],
             "provenance_index": self.provenance_index,
+            "actions": [a.to_dict() for a in self.actions],
         }
 
 
@@ -209,6 +271,7 @@ class TwinEngine:
         alert_budget: Optional[AlertBudget] = None,
         risk_model: Optional[Any] = None,
         deviation_features: Optional[list[str]] = None,
+        accountable: Optional[Accountable] = None,
     ) -> None:
         self.twin = twin
         self.deviation_detector = deviation_detector or DeviationDetector()
@@ -217,6 +280,7 @@ class TwinEngine:
         self.alert_budget = alert_budget or AlertBudget()
         self.risk_model = risk_model
         self.deviation_features = deviation_features or ["gait_speed"]
+        self.accountable = accountable
 
         self._history: dict[str, deque[float]] = {}
         self._anchors: dict[str, list[tuple[float, float]]] = {}
@@ -314,6 +378,9 @@ class TwinEngine:
             Claim.CUE_OPPORTUNITY, tier_state, result, lambda: self._cue(obs, result, now)
         )
 
+        # 7. Turn whatever the twin now believes into something a named person has to do.
+        self._route(result, now)
+
         self._last_tier = tier_state
         return result
 
@@ -363,6 +430,89 @@ class TwinEngine:
                     continue
                 self._history.setdefault(name, deque(maxlen=_HISTORY)).append(float(value))
                 self._anchors.setdefault(name, []).append((months, float(value)))
+
+    def _route(self, result: EvaluationResult, now: datetime) -> None:
+        """Convert emissions into actions, or say why no action can be raised.
+
+        Two kinds. A clinical action follows a deviation. A sensing action follows a
+        downgrade that has suspended a claim, because "the headband came off" is a real
+        piece of work somebody owns and is the commonest reason these systems go quiet
+        without anyone noticing.
+        """
+        candidates: list[tuple[str, Claim, str, str, str, int]] = []
+
+        dev = next((e for e in result.emissions if e.claim is Claim.DEVIATION), None)
+        if dev is not None:
+            z = dev.payload.get("robust_z")
+            days = dev.payload.get("sustained_days", 0)
+            severity = "high" if (z is not None and abs(z) >= 3.0) else "moderate"
+            candidates.append(
+                (
+                    "clinical",
+                    Claim.DEVIATION,
+                    f"Review this household this week ({severity} priority)",
+                    dev.explanation,
+                    "Call the caregiver, confirm against what she is seeing, and decide "
+                    "whether this warrants a visit. The twin reports a sustained departure over "
+                    f"{days} observations; it is not a diagnosis and it has no clinical finding "
+                    "behind it.",
+                    24 if severity == "high" else 72,
+                )
+            )
+
+        if result.downgrade and not result.stale:
+            candidates.append(
+                (
+                    "sensing",
+                    Claim.CARE_PLAN,
+                    "Restore sensing before the next review",
+                    result.downgrade,
+                    "Contact the household about the missing device. Until it is back the twin "
+                    "cannot make the suspended claims, and the absence will not announce itself "
+                    "again.",
+                    72,
+                )
+            )
+
+        if not candidates:
+            return
+        if self.accountable is None:
+            result.suppressions.append(
+                Suppression(
+                    claim=candidates[0][1],
+                    reason=Reason.NO_OWNER,
+                    detail="an action is warranted but no named person is accountable for this "
+                    "household; a role is not a name (Section 3.1, requirement 6)",
+                )
+            )
+            return
+
+        for kind, trigger, headline, changed, do_next, hours in candidates:
+            delivered = self.alert_budget.submit(
+                Alert(
+                    patient_id=self.twin.patient_id,
+                    driver=f"{kind}:{trigger.name}",
+                    severity="high" if hours <= 24 else "moderate",
+                    created_at=now,
+                ),
+                now=now,
+            )
+            result.actions.append(
+                Action(
+                    kind=kind,
+                    trigger=trigger,
+                    headline=headline,
+                    what_changed=changed,
+                    do_next=do_next,
+                    owner=str(self.accountable),
+                    due_within_hours=hours,
+                    delivered=delivered,
+                    note=""
+                    if delivered
+                    else "held by the weekly alert budget and logged; "
+                    "it is not lost, and it is not shown this week",
+                )
+            )
 
     def _update_trajectory(self) -> None:
         feature = self.deviation_features[0] if self.deviation_features else None

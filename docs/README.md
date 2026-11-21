@@ -65,3 +65,7 @@ Your critique is welcome — see [`../CONTRIBUTING.md`](../CONTRIBUTING.md#clini
 All diagrams are written in [Mermaid](https://mermaid.js.org/) and render natively on GitHub.
 Standalone `.mmd` sources are in [`../diagrams/`](../diagrams/) so they can be exported for a
 thesis, slide deck or poster.
+
+## The evaluation path
+
+The documents above specify the architecture. [`src/dte/engine.py`](../src/dte/engine.py) is what composes it: one method, `TwinEngine.ingest()`, through which every claim must pass. Section 1 §1.5 describes the seven tiers; the engine wires tiers 4 and 7 and leaves the rest specified. See the repository README, "Where the digital twin is".

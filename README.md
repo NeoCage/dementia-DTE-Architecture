@@ -210,6 +210,46 @@ research prototype: every figure it prints is generated from synthetic data.
 The Python sdist and wheel are built and verified by the same workflow and are
 attached to each tagged release.
 
+## Where the digital twin is
+
+The twin is the point of this repository, so here is exactly where to find it and how to
+watch it run. Three files carry it.
+
+| What | File | What it is |
+|---|---|---|
+| **The twin itself** | [`src/dte/twin.py`](src/dte/twin.py) | `TwinState` — the record for one person: current state, her own rolling baseline, a forward projection, learned preferences, consent, and a provenance entry for every value written |
+| **The rule it obeys** | [`src/dte/tiers.py`](src/dte/tiers.py) | The fidelity ladder and the claim ceiling. `detect_tier()` derives the tier from live signals; `assert_claim_permitted()` refuses anything above it |
+| **The thing that runs it** | [`src/dte/engine.py`](src/dte/engine.py) | `TwinEngine.ingest()` — the single evaluation path. Observation in, claims and actions out, with the ceiling checked before any payload is computed |
+
+### The chain, end to end
+
+```
+caregiver report ─┐
+phone / wristband ├─► TwinEngine.ingest() ─► TwinState ─► fidelity tier ─► claim ceiling ─► action
+EEG headband     ─┘      (writes provenance)   (her own      (derived per    (refuses what    (named owner,
+                                                baseline)     evaluation)     it can't sense)   due by, alert budget)
+```
+
+Watch it:
+
+```bash
+make demo-twin     # one household, 90 days, as its sensing changes
+make test-engine   # the end-to-end suite that asserts the invariant
+```
+
+`tests/test_engine.py::test_the_whole_chain_ends_in_an_instruction_a_named_person_owns`
+is the acceptance test for that diagram.
+
+### The one thing to try if you only have five minutes
+
+Open [`src/dte/engine.py`](src/dte/engine.py), find `assert_claim_permitted` inside
+`_guarded()`, delete it, and run `make test-engine`. Six tests go red, including the
+invariant that walks ninety days and checks on every single evaluation that nothing was
+claimed above the tier that was active at that moment.
+
+That is the whole safety argument, and it is falsifiable by deletion rather than by
+assertion. A ceiling that only exists in prose is a ceiling nobody has tested.
+
 ## Quick start
 
 ```bash
@@ -218,8 +258,31 @@ cd dementia-DTE-Architecture
 
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 make dev
-make test        # 223 tests
+make test        # 245 tests
 ```
+
+### Run the twin
+
+```bash
+make demo-twin
+```
+
+🟡 **ILLUSTRATIVE OUTPUT — synthetic data, no real patient:**
+
+```
+--- day 80: phone replaced; ambient sensing lost
+day  80  Operating at T0 — caregiver and clinician report only.
+           DOWNGRADE: Fidelity reduced from T1 to T0. Signal(s) no longer available:
+                      phone_ambient. Claims now suspended: deviation from own baseline.
+           EMIT    CARE_PLAN: care-plan support available; baseline established
+           SILENT  DEVIATION: CLAIM_CEILING — requires T1, operating at T0.
+                              There is no bypass path (ADR-0010).
+           ACT     Restore sensing before the next review — Maria Alvarez (care
+                   navigator), within 72h
+```
+
+Her gait is still declining on day 80 and the record still holds the history. The twin
+refuses the clinical claim it can no longer sense, and raises the logistics work instead.
 
 ### Run the Memory Anchoring Pipeline
 

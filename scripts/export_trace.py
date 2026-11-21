@@ -91,9 +91,7 @@ def build(days: int = 90, seed: int = 42) -> dict:
                 "baseline_mean": round(stat.mean, 4) if stat else None,
                 "baseline_sd": round(stat.std, 4) if stat else None,
                 "deviation_z": (
-                    round(z, 3)
-                    if (z := twin.deviation("gait_speed")) is not None
-                    else None
+                    round(z, 3) if (z := twin.deviation("gait_speed")) is not None else None
                 ),
                 "provenance": len(twin.provenance),
                 "emissions": [e.claim.name for e in result.emissions],
