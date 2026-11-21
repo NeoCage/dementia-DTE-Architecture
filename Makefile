@@ -44,6 +44,12 @@ all: lint test check
 demo:
 	PYTHONPATH=src python -m dte.cli simulate --patient-id demo-001 --hours 24 --seed 42
 
+demo-twin:  ## Walk one household through the whole engine as its sensing changes
+	PYTHONPATH=src python -m dte.cli twin --days 90
+
+test-engine:  ## Run the end-to-end evaluation-path suite
+	PYTHONPATH=src python -m pytest tests/test_engine.py -v
+
 api:
 	@echo "WARNING: no auth, no TLS, no encryption, no audit log. localhost demonstration only."
 	@echo "See docs/08-security-and-privacy.md section 8.9"
